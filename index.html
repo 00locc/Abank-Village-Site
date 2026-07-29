@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -149,6 +149,28 @@
   .facility-name { font-family: 'Josefin Sans', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--offwhite); margin-bottom: 10px; letter-spacing: 0.03em; }
   .facility-desc { font-size: 0.86rem; color: rgba(253,248,244,0.55); line-height: 1.75; }
   .facility-detail { display: inline-block; margin-top: 14px; background: rgba(232,114,58,0.12); color: var(--orange2); font-size: 0.73rem; font-weight: 600; letter-spacing: 0.08em; padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(232,114,58,0.25); }
+  .conference-showcase { margin-top: 0; max-height: 0; opacity: 0; overflow: hidden; display: grid; grid-template-columns: 1.3fr 1fr; gap: 26px; transition: max-height 0.6s ease, opacity 0.5s ease, margin-top 0.6s ease; }
+  .conference-showcase.open { margin-top: 56px; max-height: 900px; opacity: 1; }
+  .facility-card.has-media { cursor: pointer; }
+  .facility-card.has-media:hover { border-color: rgba(232,114,58,0.5); }
+  .facility-card.has-media .facility-detail::after { content: ' \2192 View Photos & Video'; }
+  .conf-close { display: inline-flex; align-items: center; gap: 8px; background: none; border: 1px solid rgba(232,114,58,0.3); color: var(--orange2); font-family: 'Jost', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 18px; border-radius: 30px; cursor: pointer; margin-top: 18px; grid-column: 1 / -1; justify-self: center; transition: all 0.25s; }
+  .conf-close:hover { background: rgba(232,114,58,0.12); }
+  .conf-slideshow { position: relative; height: 460px; border-radius: 20px; overflow: hidden; border: 1px solid rgba(232,114,58,0.18); }
+  .conf-slideshow img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; transition: opacity 0.7s ease; }
+  .conf-slideshow img.active { opacity: 1; }
+  .conf-slideshow .slide-btn { width: 38px; height: 38px; font-size: 1rem; }
+  .conf-slideshow .slide-dots { bottom: 14px; }
+  .conf-slideshow .slide-dot { width: 7px; height: 7px; }
+  .conf-caption { position: absolute; left: 18px; bottom: 18px; z-index: 5; color: var(--white); font-family: 'Josefin Sans', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.05em; text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+  .conf-video-wrap { display: flex; flex-direction: column; gap: 14px; }
+  .conf-video-frame { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid rgba(232,114,58,0.18); height: 460px; background: #000; }
+  .conf-video-frame video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .conf-video-note { font-size: 0.78rem; color: rgba(253,248,244,0.5); line-height: 1.7; text-align: center; }
+  @media (max-width: 900px) {
+    .conference-showcase { grid-template-columns: 1fr; }
+    .conf-slideshow, .conf-video-frame { height: 300px; }
+  }
   #location { background: var(--orange-faint); padding: 100px 48px; }
   .location-wrapper { display: grid; grid-template-columns: 1fr 1.6fr; gap: 56px; align-items: start; margin-top: 48px; }
   .location-info p { font-size: 0.92rem; color: var(--text2); line-height: 1.85; margin-bottom: 28px; font-weight: 300; }
@@ -188,11 +210,12 @@
     footer { flex-direction: column; gap: 10px; text-align: center; }
   }
 </style>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280"><rect width="400" height="280" fill="#E8723A"/><text x="200" y="150" font-family="sans-serif" font-size="42" font-weight="700" fill="#FEFCFA" text-anchor="middle">AV</text></svg></template>
 </head>
 <body>
 
 <nav>
-  <div class="nav-logo"><img src="abank-village-logo.png" alt="Abank Village logo"><div>Abank Village<span>Guest House &middot; Near KNUST-Emena, Kumasi</span></div></div>
+  <div class="nav-logo"><img src="images/abank-village-logo.png" alt="Abank Village logo"><div>Abank Village<span>Guest House &middot; Near KNUST-Emena, Kumasi</span></div></div>
   <ul class="nav-links">
     <li><a href="#about">About</a></li>
     <li><a href="#rooms">Rooms</a></li>
@@ -232,10 +255,10 @@
   </div>
   <div class="about-img-stack reveal">
     <div class="about-img-placeholder img-main">
-      <img src="headingimage.jpg" alt="Abank Village Guest House exterior">
+      <img src="images/headingimage.jpg" alt="Abank Village Guest House exterior">
     </div>
     <div class="about-img-placeholder img-accent">
-      <img src="headingimage2.webp" alt="Abank Village Guest House property">
+      <img src="images/headingimage2.webp" alt="Abank Village Guest House property">
     </div>
   </div>
 </section>
@@ -249,11 +272,11 @@
     <!-- GH&#8373;200 Standard -->
     <div class="room-card reveal">
       <div class="room-slideshow" id="slideshow200">
-        <img src="200cedis.jpeg" alt="Standard Room" class="active">
-        <img src="200cedis2.jpeg" alt="Standard Room">
-        <img src="200cedis3.jpeg" alt="Standard Room">
-        <img src="200cedis4.jpeg" alt="Standard Room">
-        <img src="200cedis5.jpeg" alt="Standard Room">
+        <img src="images/200cedis.jpeg" alt="Standard Room" class="active">
+        <img src="images/200cedis2.jpeg" alt="Standard Room">
+        <img src="images/200cedis3.jpeg" alt="Standard Room">
+        <img src="images/200cedis4.jpeg" alt="Standard Room">
+        <img src="images/200cedis5.jpeg" alt="Standard Room">
         <div class="room-badge">Standard</div>
         <button class="slide-btn slide-prev" onclick="changeSlide('slideshow200',-1)">&#8249;</button>
         <button class="slide-btn slide-next" onclick="changeSlide('slideshow200',1)">&#8250;</button>
@@ -277,9 +300,9 @@
     <!-- GH&#8373;250 Block D -->
     <div class="room-card reveal">
       <div class="room-slideshow" id="slideshow250">
-        <img src="250cedis1.jpeg" alt="Block D Room" class="active">
-        <img src="250cedis2.jpeg" alt="Block D Room">
-        <img src="250cedis3.jpeg" alt="Block D Room">
+        <img src="images/250cedis1.jpeg" alt="Block D Room" class="active">
+        <img src="images/250cedis2.jpeg" alt="Block D Room">
+        <img src="images/250cedis3.jpeg" alt="Block D Room">
         <div class="room-badge">Block D</div>
         <button class="slide-btn slide-prev" onclick="changeSlide('slideshow250',-1)">&#8249;</button>
         <button class="slide-btn slide-next" onclick="changeSlide('slideshow250',1)">&#8250;</button>
@@ -301,9 +324,9 @@
     <!-- GH&#8373;300 Block B and C -->
     <div class="room-card reveal">
       <div class="room-slideshow" id="slideshow300">
-        <img src="300cedis1.jpeg" alt="Block B and C Room" class="active">
-        <img src="300cedis2.jpeg" alt="Block B and C Room">
-        <img src="300cedis3.jpeg" alt="Block B and C Room">
+        <img src="images/300cedis1.jpeg" alt="Block B and C Room" class="active">
+        <img src="images/300cedis2.jpeg" alt="Block B and C Room">
+        <img src="images/300cedis3.jpeg" alt="Block B and C Room">
         <div class="room-badge">Block B &amp; C</div>
         <button class="slide-btn slide-prev" onclick="changeSlide('slideshow300',-1)">&#8249;</button>
         <button class="slide-btn slide-next" onclick="changeSlide('slideshow300',1)">&#8250;</button>
@@ -325,11 +348,11 @@
     <!-- GH&#8373;350 Rooms C3 and C9 -->
     <div class="room-card reveal">
       <div class="room-slideshow" id="slideshow350">
-        <img src="350cedis1.jpeg" alt="Rooms C3 and C9" class="active">
-        <img src="350cedis2.jpeg" alt="Rooms C3 and C9">
-        <img src="350cedis4.jpeg" alt="Rooms C3 and C9">
-        <img src="350cedis5.jpeg" alt="Rooms C3 and C9">
-        <img src="350cedis6.jpeg" alt="Rooms C3 and C9">
+        <img src="images/350cedis/350cedis1.jpeg" alt="Rooms C3 and C9" class="active">
+        <img src="images/350cedis/350cedis2.jpeg" alt="Rooms C3 and C9">
+        <img src="images/350cedis/350cedis4.jpeg" alt="Rooms C3 and C9">
+        <img src="images/350cedis/350cedis5.jpeg" alt="Rooms C3 and C9">
+        <img src="images/350cedis/350cedis6.jpeg" alt="Rooms C3 and C9">
         <div class="room-badge">Premium</div>
         <button class="slide-btn slide-prev" onclick="changeSlide('slideshow350',-1)">&#8249;</button>
         <button class="slide-btn slide-next" onclick="changeSlide('slideshow350',1)">&#8250;</button>
@@ -353,12 +376,12 @@
     <!-- GH&#8373;400 Family Suite -->
     <div class="room-card reveal">
       <div class="room-slideshow" id="slideshow400">
-        <img src="400cedis1.jpeg" alt="Room C6 Family Suite" class="active">
-        <img src="400cedis2.jpeg" alt="Room C6 Family Suite">
-        <img src="400cedis3.jpeg" alt="Room C6 Family Suite">
-        <img src="400cedis4.jpeg" alt="Room C6 Family Suite">
-        <img src="400cedis5.jpeg" alt="Room C6 Family Suite">
-        <img src="400cedis6.jpeg" alt="Room C6 Family Suite">
+        <img src="images/400cedis1.jpeg" alt="Room C6 Family Suite" class="active">
+        <img src="images/400cedis2.jpeg" alt="Room C6 Family Suite">
+        <img src="images/400cedis3.jpeg" alt="Room C6 Family Suite">
+        <img src="images/400cedis4.jpeg" alt="Room C6 Family Suite">
+        <img src="images/400cedis5.jpeg" alt="Room C6 Family Suite">
+        <img src="images/400cedis6.jpeg" alt="Room C6 Family Suite">
         <div class="room-badge">Suite</div>
         <button class="slide-btn slide-prev" onclick="changeSlide('slideshow400',-1)">&#8249;</button>
         <button class="slide-btn slide-next" onclick="changeSlide('slideshow400',1)">&#8250;</button>
@@ -422,8 +445,35 @@
   <div class="divider-line reveal"></div>
   <div class="facilities-grid">
     <div class="facility-card reveal"><span class="facility-icon">&#127869;&#65039;</span><div class="facility-name">Restaurant</div><div class="facility-desc">Freshly prepared local and continental cuisine served throughout the day. Open to guests and visitors alike &mdash; perfect for breakfast, lunch, and dinner.</div></div>
-    <div class="facility-card reveal"><span class="facility-icon">&#127908;</span><div class="facility-name">Conference Room</div><div class="facility-desc">A spacious, professional venue ideal for business meetings, seminars, workshops, and community events. Fully equipped and ready to host your next gathering.</div><span class="facility-detail">Capacity: 150 People</span></div>
+    <div class="facility-card has-media reveal" onclick="toggleConfShowcase()"><span class="facility-icon">&#127908;</span><div class="facility-name">Conference Room</div><div class="facility-desc">A spacious, professional venue ideal for business meetings, seminars, workshops, and community events. Fully equipped and ready to host your next gathering.</div><span class="facility-detail">Capacity: 150 People</span></div>
     <div class="facility-card reveal"><span class="facility-icon">&#128663;</span><div class="facility-name">Secure Parking</div><div class="facility-desc">Ample on-site parking available for all guests, with security maintained throughout the day and night for complete peace of mind.</div></div>
+  </div>
+
+  <div class="conference-showcase" id="conferenceShowcase">
+    <div class="conf-slideshow" id="slideshowConf">
+      <img src="images/conference/conference1.jpeg" alt="Abank Village conference room set for a formal dinner event" class="active">
+      <img src="images/conference/conference2.jpeg" alt="Abank Village conference room seating guests at gala tables">
+      <img src="images/conference/conference3.jpeg" alt="Abank Village conference room with blue mood lighting">
+      <img src="images/conference/conference4.jpeg" alt="Abank Village conference room with pink mood lighting and guests">
+      <img src="images/conference/conference5.jpeg" alt="Abank Village conference room full house under red lighting">
+      <div class="conf-caption">150-Seat Conference &amp; Event Hall</div>
+      <button class="slide-btn slide-prev" onclick="changeSlide('slideshowConf',-1)">&#8249;</button>
+      <button class="slide-btn slide-next" onclick="changeSlide('slideshowConf',1)">&#8250;</button>
+      <div class="slide-dots" id="dotsConf">
+        <button class="slide-dot active" onclick="goToSlide('slideshowConf',0)"></button>
+        <button class="slide-dot" onclick="goToSlide('slideshowConf',1)"></button>
+        <button class="slide-dot" onclick="goToSlide('slideshowConf',2)"></button>
+        <button class="slide-dot" onclick="goToSlide('slideshowConf',3)"></button>
+        <button class="slide-dot" onclick="goToSlide('slideshowConf',4)"></button>
+      </div>
+    </div>
+    <div class="conf-video-wrap">
+      <div class="conf-video-frame">
+        <video src="images/conference/conference-video.mp4" controls playsinline preload="metadata" poster="images/conference/conference1.jpeg"></video>
+      </div>
+      <p class="conf-video-note">A look inside a recent event &mdash; ambient lighting, full table settings and seating for up to 150 guests.</p>
+    </div>
+    <button class="conf-close" onclick="toggleConfShowcase()">Close Gallery</button>
   </div>
 </section>
 
@@ -490,6 +540,17 @@
   setInterval(() => changeSlide('slideshow300', 1), 3600);
   setInterval(() => changeSlide('slideshow350', 1), 4000);
   setInterval(() => changeSlide('slideshow400', 1), 4400);
+  setInterval(() => changeSlide('slideshowConf', 1), 4000);
+  function toggleConfShowcase() {
+    const el = document.getElementById('conferenceShowcase');
+    el.classList.toggle('open');
+    if (el.classList.contains('open')) {
+      setTimeout(() => {
+        const y = el.getBoundingClientRect().top + window.pageYOffset - 90;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }, 300);
+    }
+  }
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry, i) => {
       if (entry.isIntersecting) setTimeout(() => entry.target.classList.add('visible'), i * 55);
@@ -499,3 +560,4 @@
 </script>
 </body>
 </html>
+

@@ -20,15 +20,34 @@
   ],
   "send_email": [{ "name": "EMAIL" }],
   "triggers": { "crons": ["*/30 * * * *"] },
+  // Production settings. Payments stay switched off until real Paystack/PayPal keys are added as secrets.
   "vars": {
-    // "demo" = fake checkout for testing (never works on abankvillage.com). Switch to "live" before launch.
-    "PAYMENT_MODE": "demo",
-    "PAYPAL_ENV": "sandbox",
-    "SITE_URL": "",
+    "PAYMENT_MODE": "live",
+    "PAYPAL_ENV": "live",
+    "SITE_URL": "https://abankvillage.com",
     "HOTEL_EMAIL": "stayabankvillage@gmail.com",
     "EMAIL_FROM": "",
-    // Cloudflare's always-pass test key; replace with the real Turnstile site key before launch.
-    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+    // Real Turnstile site key goes here before launch (secret goes in TURNSTILE_SECRET_KEY).
+    "TURNSTILE_SITE_KEY": ""
+  },
+  // Preview builds (non-main branches): separate database, simulated payments, test bot-check key.
+  "previews": {
+    "vars": {
+      "PAYMENT_MODE": "demo",
+      "PAYPAL_ENV": "sandbox",
+      "SITE_URL": "",
+      "HOTEL_EMAIL": "",
+      "EMAIL_FROM": "",
+      "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+    },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "abank-bookings-preview",
+        "database_id": "eab96363-4f20-445d-82fa-7931db7cbf8a"
+      }
+    ],
+    "send_email": [{ "name": "EMAIL" }]
   },
   "observability": { "enabled": true }
 }

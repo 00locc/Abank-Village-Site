@@ -211,6 +211,73 @@
   .contact-big-email:hover { color: var(--white); }
   .cta-btn { display: inline-flex; align-items: center; gap: 10px; background: var(--white); color: var(--orange); text-decoration: none; padding: 14px 38px; border-radius: 40px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.3s; box-shadow: 0 8px 28px rgba(14,36,54,0.25); }
   .cta-btn:hover { background: var(--orange-pale); transform: translateY(-2px); }
+  #contact [hidden] { display: none !important; }
+  .anchor-offset { display: block; position: relative; top: -90px; visibility: hidden; }
+  .room-cta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--offwhite2); }
+  .room-avail { font-size: 0.74rem; font-weight: 600; color: var(--text2); }
+  .room-avail.low { color: #B4560B; }
+  .room-avail.none { color: #A3302A; }
+  .room-book-btn { background: var(--orange); color: var(--white); text-decoration: none; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 16px; border-radius: 30px; white-space: nowrap; transition: background 0.25s; }
+  .room-book-btn:hover { background: var(--dark2); }
+  .room-book-btn.disabled { background: var(--offwhite3); color: var(--muted); pointer-events: none; }
+  .bk { background: var(--white); color: var(--text); max-width: 760px; margin: 0 auto; text-align: left; border-radius: 24px; padding: 34px; box-shadow: 0 24px 70px rgba(14,36,54,0.3); }
+  .bk-demo { background: #FFF4D6; color: #6B4E00; border: 1px solid #F0D58A; border-radius: 12px; padding: 10px 14px; font-size: 0.82rem; font-weight: 500; margin-bottom: 22px; }
+  .bk-step { margin-bottom: 26px; }
+  .bk-step-title { font-family: 'Josefin Sans', sans-serif; font-weight: 700; font-size: 1.02rem; color: var(--dark); letter-spacing: 0.03em; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .bk-step-title span { width: 26px; height: 26px; border-radius: 50%; background: var(--orange); color: var(--white); font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; }
+  .bk-grid3 { display: grid; grid-template-columns: 1fr 1fr 110px; gap: 14px; }
+  .bk-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .bk-span2 { grid-column: 1 / -1; }
+  .bk-field { display: flex; flex-direction: column; gap: 6px; }
+  .bk-field > span { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .bk-field em { text-transform: none; letter-spacing: 0; font-style: normal; font-weight: 400; }
+  .bk-field input, .bk-field select, .bk-field textarea { font: inherit; font-size: 0.95rem; color: var(--text); background: var(--offwhite); border: 1.5px solid var(--offwhite3); border-radius: 12px; padding: 11px 13px; width: 100%; transition: border-color 0.2s, box-shadow 0.2s; }
+  .bk-field input:focus, .bk-field select:focus, .bk-field textarea:focus { outline: none; border-color: var(--orange2); box-shadow: 0 0 0 3px rgba(62,134,190,0.18); background: var(--white); }
+  .bk-field textarea { resize: vertical; }
+  .bk-hint { font-size: 0.8rem; color: var(--text2); margin-top: 10px; }
+  .bk-rooms { display: grid; gap: 10px; }
+  .bk-room { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; border: 1.5px solid var(--offwhite3); border-radius: 14px; padding: 13px 16px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+  .bk-room:hover { border-color: var(--orange3); }
+  .bk-room input { accent-color: var(--orange); width: 18px; height: 18px; }
+  .bk-room.selected { border-color: var(--orange); background: var(--orange-faint); }
+  .bk-room.full { opacity: 0.55; cursor: not-allowed; }
+  .bk-room-name { font-weight: 600; font-size: 0.95rem; color: var(--dark); }
+  .bk-room-left { font-size: 0.76rem; color: var(--text2); }
+  .bk-room-left.low { color: #B4560B; font-weight: 600; }
+  .bk-room-left.none { color: #A3302A; font-weight: 600; }
+  .bk-room-price { font-weight: 600; color: var(--orange); white-space: nowrap; font-size: 0.95rem; }
+  .bk-room-price small { color: var(--muted); font-weight: 400; font-size: 0.72rem; }
+  .bk-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bk-pay-opt { display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid var(--offwhite3); border-radius: 14px; padding: 14px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+  .bk-pay-opt:has(input:checked) { border-color: var(--orange); background: var(--orange-faint); }
+  .bk-pay-opt input { accent-color: var(--orange); margin-top: 3px; width: 17px; height: 17px; flex-shrink: 0; }
+  .bk-pay-opt strong { display: block; font-size: 0.92rem; color: var(--dark); }
+  .bk-pay-opt small { display: block; font-size: 0.74rem; color: var(--text2); line-height: 1.5; margin-top: 3px; }
+  .bk-pay-opt[hidden] { display: none; }
+  .bk-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--orange-faint); border: 1px solid var(--offwhite3); border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; font-size: 0.86rem; color: var(--text2); }
+  .bk-total { font-family: 'Josefin Sans', sans-serif; font-size: 1.5rem; font-weight: 700; color: var(--orange); white-space: nowrap; }
+  .bk-turnstile { margin-bottom: 14px; min-height: 0; }
+  .bk-error { background: #FDECEA; color: #8A1F17; border: 1px solid #F3C1BB; border-radius: 12px; padding: 11px 14px; font-size: 0.86rem; margin-bottom: 14px; }
+  .bk-submit { width: 100%; background: var(--orange); color: var(--white); border: 0; border-radius: 40px; padding: 16px; font-family: 'Jost', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: background 0.25s, transform 0.25s; }
+  .bk-submit:hover:not(:disabled) { background: var(--dark2); transform: translateY(-1px); }
+  .bk-submit:disabled { background: var(--offwhite3); color: var(--muted); cursor: not-allowed; }
+  .bk-small { font-size: 0.78rem; color: var(--text2); text-align: center; margin-top: 14px; }
+  .bk-small a { color: var(--orange); font-weight: 600; }
+  .bk-call { margin-top: 40px; color: rgba(252,253,254,0.85); font-size: 0.92rem; }
+  .bk-call p { margin-bottom: 8px; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(252,253,254,0.7); }
+  .bk-call a { color: var(--white); font-weight: 600; text-decoration: none; }
+  .bk-call a:hover { color: var(--orange3); }
+  .bk-call span { margin: 0 10px; opacity: 0.5; }
+  @media (max-width: 640px) {
+    .bk { padding: 22px 16px; border-radius: 18px; }
+    .bk-grid3 { grid-template-columns: 1fr 1fr; }
+    .bk-grid3 .bk-field:last-child { grid-column: 1 / -1; }
+    .bk-grid2, .bk-pay { grid-template-columns: 1fr; }
+    .bk-room { grid-template-columns: auto 1fr; }
+    .bk-room-price { grid-column: 2; }
+    .bk-summary { flex-direction: column; align-items: flex-start; }
+    .bk-call span { display: block; height: 4px; visibility: hidden; }
+  }
   footer { background: var(--dark); border-top: 1px solid rgba(23,88,140,0.15); padding: 28px 48px; display: flex; justify-content: space-between; align-items: center; }
   .footer-logo { font-family: 'Josefin Sans', sans-serif; color: var(--orange2); font-size: 1rem; font-weight: 700; letter-spacing: 0.06em; }
   .footer-copy { font-size: 0.7rem; color: rgba(245,250,253,0.25); }
@@ -240,7 +307,7 @@
     <li><a href="#utilities">Utilities</a></li>
     <li><a href="#facilities">Facilities</a></li>
     <li><a href="#location">Location</a></li>
-    <li><a href="#contact" class="nav-cta">Book Now</a></li>
+    <li><a href="#book" class="nav-cta">Book Now</a></li>
   </ul>
 </nav>
 
@@ -317,6 +384,7 @@
         <div class="room-features">
           <span class="feature-pill">&#127744; Fan</span><span class="feature-pill">&#128250; TV</span><span class="feature-pill">&#128719;&#65039; Double Bed</span><span class="feature-pill">&#128703; Inside Washroom</span>
         </div>
+        <div class="room-cta"><span class="room-avail" data-room="standard"></span><a href="#book" class="room-book-btn" data-room="standard">Book this room</a></div>
       </div>
     </div>
 
@@ -345,6 +413,7 @@
         <div class="room-features">
           <span class="feature-pill">&#127744; Fan</span><span class="feature-pill">&#128250; TV</span><span class="feature-pill">&#10052;&#65039; Air Conditioning</span><span class="feature-pill">&#128719;&#65039; Double Bed</span>
         </div>
+        <div class="room-cta"><span class="room-avail" data-room="block-d"></span><a href="#book" class="room-book-btn" data-room="block-d">Book this room</a></div>
       </div>
     </div>
 
@@ -375,6 +444,7 @@
         <div class="room-features">
           <span class="feature-pill">&#128081; Queen Size Bed</span><span class="feature-pill">&#10052;&#65039; Air Conditioning</span><span class="feature-pill">&#9832;&#65039; Water Heater</span><span class="feature-pill">&#128250; TV</span><span class="feature-pill">&#127744; Fan</span><span class="feature-pill">&#129482; Fridge</span><span class="feature-pill">&#10024; &amp; More</span>
         </div>
+        <div class="room-cta"><span class="room-avail" data-room="block-bc"></span><a href="#book" class="room-book-btn" data-room="block-bc">Book this room</a></div>
       </div>
     </div>
 
@@ -403,6 +473,7 @@
         <div class="room-features">
           <span class="feature-pill">&#128081; King Size Bed</span><span class="feature-pill">&#10052;&#65039; Air Conditioning</span><span class="feature-pill">&#127744; Fan</span><span class="feature-pill">&#128250; TV</span><span class="feature-pill">&#129482; Fridge</span>
         </div>
+        <div class="room-cta"><span class="room-avail" data-room="premium"></span><a href="#book" class="room-book-btn" data-room="premium">Book this room</a></div>
       </div>
     </div>
 
@@ -437,6 +508,7 @@
         <div class="room-features">
           <span class="feature-pill">&#128719;&#65039; 2 Beds</span><span class="feature-pill">&#10052;&#65039; Air Conditioning</span><span class="feature-pill">&#127744; Fan</span><span class="feature-pill">&#128250; TV</span><span class="feature-pill">&#129482; Fridge</span><span class="feature-pill">&#127859; Private Kitchen +GH&#8373;60/day</span>
         </div>
+        <div class="room-cta"><span class="room-avail" data-room="suite"></span><a href="#book" class="room-book-btn" data-room="suite">Book this room</a></div>
       </div>
     </div>
 
@@ -537,14 +609,63 @@
 </section>
 
 <section id="contact">
-  <p class="section-label reveal">Get In Touch</p>
+  <span id="book" class="anchor-offset"></span>
+  <p class="section-label reveal">Reserve Online</p>
   <h2 class="section-title reveal">Book Your <em>Stay</em></h2>
   <div class="divider-line reveal"></div>
-  <p class="contact-desc reveal">Ready to experience warm hospitality near KNUST-Emena, Kumasi? Call or email us to make your reservation today.</p>
-  <a href="tel:0262226592" class="contact-big-phone reveal">0262 226 592</a>
-  <a href="tel:0233344425" class="contact-big-phone reveal" style="font-size:clamp(1.6rem,4vw,2.6rem);margin-bottom:12px;">0233 344 425</a>
-  <a href="mailto:stayabankvillage@gmail.com" class="contact-big-email reveal">stayabankvillage@gmail.com</a>
-  <a href="tel:0262226592" class="cta-btn reveal">Call to Book</a>
+  <p class="contact-desc reveal">Pick your dates, choose a room and pay securely with Mobile Money, card or PayPal. You'll get an instant confirmation by email.</p>
+
+  <form class="bk" id="bookingForm" novalidate>
+    <div class="bk-demo" id="bkDemo" hidden>Preview mode — payments are simulated, no real money is charged.</div>
+
+    <div class="bk-step">
+      <div class="bk-step-title"><span>1</span>Your dates</div>
+      <div class="bk-grid3">
+        <label class="bk-field"><span>Check-in</span><input type="date" id="bkIn" required></label>
+        <label class="bk-field"><span>Check-out</span><input type="date" id="bkOut" required></label>
+        <label class="bk-field"><span>Rooms</span><select id="bkRooms"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+      </div>
+      <p class="bk-hint" id="bkNights">Check-in from 12:00 PM &middot; Check-out by 11:00 AM</p>
+    </div>
+
+    <div class="bk-step">
+      <div class="bk-step-title"><span>2</span>Choose a room</div>
+      <div class="bk-rooms" id="bkRoomList" role="radiogroup" aria-label="Room type"><p class="bk-hint">Loading availability&hellip;</p></div>
+    </div>
+
+    <div class="bk-step">
+      <div class="bk-step-title"><span>3</span>Your details</div>
+      <div class="bk-grid2">
+        <label class="bk-field"><span>Full name</span><input type="text" id="bkName" autocomplete="name" maxlength="100" required></label>
+        <label class="bk-field"><span>Phone (Mobile Money number)</span><input type="tel" id="bkPhone" autocomplete="tel" placeholder="024 123 4567" maxlength="30" required></label>
+        <label class="bk-field bk-span2"><span>Email (for your confirmation)</span><input type="email" id="bkEmail" autocomplete="email" maxlength="254" required></label>
+        <label class="bk-field bk-span2"><span>Special requests <em>(optional)</em></span><textarea id="bkNotes" rows="2" maxlength="500" placeholder="Arrival time, extra needs&hellip;"></textarea></label>
+      </div>
+    </div>
+
+    <div class="bk-step">
+      <div class="bk-step-title"><span>4</span>Payment</div>
+      <div class="bk-pay" id="bkPay">
+        <label class="bk-pay-opt" id="bkPayPaystack"><input type="radio" name="bkProvider" value="paystack" checked><span><strong>Mobile Money or Card</strong><small>MTN MoMo, Telecel Cash, AirtelTigo Money, Visa, Mastercard &middot; via Paystack</small></span></label>
+        <label class="bk-pay-opt" id="bkPayPaypal"><input type="radio" name="bkProvider" value="paypal"><span><strong>PayPal</strong><small id="bkUsdNote">Charged in US dollars</small></span></label>
+      </div>
+    </div>
+
+    <div class="bk-summary" id="bkSummary" hidden>
+      <div><span id="bkSumLine"></span></div>
+      <div class="bk-total">GH&#8373; <span id="bkTotal">0</span></div>
+    </div>
+
+    <div id="bkTurnstile" class="bk-turnstile"></div>
+    <div class="bk-error" id="bkError" role="alert" hidden></div>
+    <button type="submit" class="bk-submit" id="bkSubmit" disabled>Choose a room</button>
+    <p class="bk-small">Your room is held for 20 minutes while you pay. Already booked? <a href="booking-status.html">Check your booking status</a>.</p>
+  </form>
+
+  <div class="bk-call reveal">
+    <p>Prefer to book by phone?</p>
+    <a href="tel:0262226592">0262 226 592</a><span>&middot;</span><a href="tel:0233344425">0233 344 425</a><span>&middot;</span><a href="mailto:stayabankvillage@gmail.com">stayabankvillage@gmail.com</a>
+  </div>
 </section>
 
 <footer>
@@ -643,6 +764,8 @@
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script src="js/booking.js" defer></script>
 </body>
 </html>
 

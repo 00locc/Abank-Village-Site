@@ -1,0 +1,13 @@
+.git
+.git/*
+src
+migrations
+node_modules
+wrangler.jsonc
+package.json
+package-lock.json
+.dev.vars
+.wrangler
+tests
+_card.html
+_300card.html

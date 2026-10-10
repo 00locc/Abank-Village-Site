@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin | Abank Village</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="images/abank-village-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --blue:#17588C; --blue2:#3E86BE; --blue3:#A9CDE6; --pale:#E7F1F9; --faint:#F3F8FC; --dark:#0E2436; --dark2:#1C4363; --text:#12293C; --text2:#34566F; --muted:#7C93A5; --white:#FCFDFE; --off:#F5FAFD; --off2:#E4EFF6; --off3:#CFE0EC; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Jost',sans-serif; background:var(--off); color:var(--text); min-height:100vh; font-size:15px; }
+  [hidden] { display:none !important; }
+  .login-wrap { min-height:100vh; display:grid; place-items:center; padding:16px; }
+  .card { background:var(--white); border:1px solid var(--off3); border-radius:18px; padding:24px; box-shadow:0 10px 40px rgba(14,36,54,.06); }
+  .login { width:100%; max-width:380px; }
+  .login img { height:48px; display:block; margin:0 auto 10px; }
+  h1 { font-family:'Josefin Sans',sans-serif; color:var(--dark); font-size:1.4rem; letter-spacing:.03em; }
+  .login h1 { text-align:center; margin-bottom:20px; }
+  h2 { font-family:'Josefin Sans',sans-serif; color:var(--dark); font-size:1.08rem; margin-bottom:14px; letter-spacing:.03em; }
+  label { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  label > span { font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  input, select, textarea { font:inherit; font-size:.92rem; padding:9px 11px; border:1.5px solid var(--off3); border-radius:10px; background:var(--off); color:var(--text); width:100%; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--blue2); background:var(--white); }
+  .chk { flex-direction:row; align-items:center; gap:8px; }
+  .chk input { width:auto; }
+  button { font:inherit; font-weight:600; font-size:.8rem; letter-spacing:.06em; border:0; border-radius:24px; padding:10px 18px; cursor:pointer; background:var(--blue); color:var(--white); }
+  button:hover { background:var(--dark2); }
+  button.ghost { background:var(--pale); color:var(--dark); }
+  button.ghost:hover { background:var(--off3); }
+  button.danger { background:#FDECEA; color:#8A1F17; }
+  button.danger:hover { background:#F8D4CF; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .full { width:100%; }
+  .err { background:#FDECEA; color:#8A1F17; border:1px solid #F3C1BB; border-radius:10px; padding:9px 12px; font-size:.86rem; margin-bottom:12px; }
+  .ok { background:#E3F4EA; color:#1D6B3A; border:1px solid #BFE3CC; border-radius:10px; padding:9px 12px; font-size:.86rem; margin-bottom:12px; }
+  .demo { background:#FFF4D6; color:#6B4E00; border:1px solid #F0D58A; border-radius:10px; padding:8px 12px; font-size:.84rem; margin-bottom:16px; }
+  .link { background:none; color:var(--blue); padding:0; font-size:.82rem; letter-spacing:0; margin-top:12px; }
+  .link:hover { background:none; text-decoration:underline; }
+  header { background:var(--dark); color:var(--white); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; position:sticky; top:0; z-index:5; }
+  header .brand { font-family:'Josefin Sans',sans-serif; font-weight:700; letter-spacing:.05em; }
+  header .who { font-size:.8rem; opacity:.8; display:flex; align-items:center; gap:12px; }
+  header button { padding:6px 14px; font-size:.72rem; }
+  nav.tabs { display:flex; gap:4px; padding:12px 20px 0; border-bottom:1px solid var(--off3); background:var(--white); overflow-x:auto; }
+  nav.tabs button { background:none; color:var(--text2); border-radius:10px 10px 0 0; padding:10px 16px; border-bottom:2px solid transparent; white-space:nowrap; }
+  nav.tabs button.active { color:var(--blue); border-bottom-color:var(--blue); }
+  main { padding:20px; max-width:1200px; margin:0 auto; }
+  .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; }
+  .toolbar label { margin:0; min-width:150px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px; }
+  .stat { background:var(--white); border:1px solid var(--off3); border-radius:14px; padding:14px; }
+  .stat b { display:block; font-family:'Josefin Sans',sans-serif; font-size:1.5rem; color:var(--blue); }
+  .stat span { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .table-wrap { overflow-x:auto; background:var(--white); border:1px solid var(--off3); border-radius:14px; }
+  table { width:100%; border-collapse:collapse; font-size:.86rem; }
+  th { text-align:left; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--off3); white-space:nowrap; }
+  td { padding:10px 12px; border-bottom:1px solid var(--off2); white-space:nowrap; }
+  tbody tr { cursor:pointer; }
+  tbody tr:hover { background:var(--faint); }
+  .pill { display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 9px; border-radius:20px; }
+  .p-confirmed, .p-checked_in, .p-paid { background:#E3F4EA; color:#1D6B3A; }
+  .p-completed { background:var(--pale); color:var(--dark2); }
+  .p-pending_payment, .p-unpaid { background:#FFF4D6; color:#7A5A00; }
+  .p-cancelled, .p-expired, .p-payment_conflict, .p-refunded { background:#FDECEA; color:#8A1F17; }
+  .empty { padding:30px; text-align:center; color:var(--muted); }
+  .drawer-bg { position:fixed; inset:0; background:rgba(14,36,54,.4); z-index:10; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:min(480px,100%); background:var(--white); z-index:11; overflow-y:auto; padding:22px; box-shadow:-10px 0 40px rgba(14,36,54,.2); }
+  .drawer .close { position:absolute; top:14px; right:14px; }
+  dl { display:grid; grid-template-columns:auto 1fr; margin:14px 0; }
+  dt, dd { padding:7px 0; border-bottom:1px solid var(--off2); font-size:.88rem; }
+  dt { color:var(--muted); padding-right:14px; }
+  dd { font-weight:500; word-break:break-word; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .events { list-style:none; font-size:.84rem; color:var(--text2); }
+  .events li { padding:8px 0; border-bottom:1px solid var(--off2); }
+  .events small { display:block; color:var(--muted); font-size:.72rem; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+  .rooms-table input { width:90px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  @media (max-width:760px) { .two, .grid2 { grid-template-columns:1fr; } main { padding:14px; } }
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginView" hidden>
+  <form class="card login" id="loginForm">
+    <img src="images/abank-village-logo.png" alt="">
+    <h1>Staff login</h1>
+    <div class="err" id="loginErr" hidden></div>
+    <label><span>Email</span><input id="loginEmail" type="email" autocomplete="username" required></label>
+    <label><span>Password</span><input id="loginPass" type="password" autocomplete="current-password" required></label>
+    <button class="full" type="submit">Log in</button>
+    <button type="button" class="link" id="showSetup">First time? Create the admin account</button>
+  </form>
+  <form class="card login" id="setupForm" hidden>
+    <h1>Create admin account</h1>
+    <div class="err" id="setupErr" hidden></div>
+    <label><span>Setup code</span><input id="setupToken" type="password" autocomplete="off" required></label>
+    <label><span>Email</span><input id="setupEmail" type="email" autocomplete="username" required></label>
+    <label><span>Password (10+ characters)</span><input id="setupPass" type="password" minlength="10" autocomplete="new-password" required></label>
+    <button class="full" type="submit">Create account</button>
+    <button type="button" class="link" id="showLogin">Back to login</button>
+  </form>
+</div>
+
+<div id="appView" hidden>
+  <header>
+    <div class="brand">Abank Village &middot; Bookings</div>
+    <div class="who"><span id="whoEmail"></span><button class="ghost" id="logoutBtn">Log out</button></div>
+  </header>
+  <nav class="tabs">
+    <button data-tab="bookings" class="active">Bookings</button>
+    <button data-tab="add">Add phone / walk-in booking</button>
+    <button data-tab="rooms">Rooms &amp; prices</button>
+    <button data-tab="account">Account</button>
+  </nav>
+  <main>
+    <div class="demo" id="demoNote" hidden>Preview mode: payments are simulated. Test bookings will be cleared before launch.</div>
+
+    <section data-panel="bookings">
+      <div class="stats" id="stats"></div>
+      <div class="toolbar">
+        <label><span>Show</span>
+          <select id="fStatus">
+            <option value="">Current &amp; upcoming</option>
+            <option value="active">Confirmed / checked in</option>
+            <option value="pending_payment">Awaiting payment</option>
+            <option value="payment_conflict">Needs attention</option>
+            <option value="checked_in">Checked in</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="expired">Expired</option>
+          </select></label>
+        <label><span>Staying from</span><input type="date" id="fFrom"></label>
+        <label style="flex:1"><span>Search</span><input id="fQ" placeholder="Reference, name, email or phone"></label>
+        <button class="ghost" id="refreshBtn" type="button">Refresh</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Ref</th><th>Guest</th><th>Phone</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead>
+        <tbody id="bookingRows"></tbody>
+      </table></div>
+    </section>
+
+    <section data-panel="add" hidden>
+      <form class="card" id="addForm" style="max-width:620px">
+        <h2>Add a phone or walk-in booking</h2>
+        <p style="font-size:.86rem;color:var(--text2);margin-bottom:14px">Adding bookings here keeps online availability accurate.</p>
+        <div class="err" id="addErr" hidden></div><div class="ok" id="addOk" hidden></div>
+        <div class="grid2">
+          <label><span>Room type</span><select id="aRoom"></select></label>
+          <label><span>Number of rooms</span><input id="aRooms" type="number" min="1" max="50" value="1"></label>
+          <label><span>Check-in</span><input id="aIn" type="date" required></label>
+          <label><span>Check-out</span><input id="aOut" type="date" required></label>
+          <label><span>Guest name</span><input id="aName" maxlength="100" required></label>
+          <label><span>Phone</span><input id="aPhone" maxlength="30"></label>
+          <label><span>Email (optional)</span><input id="aEmail" type="email" maxlength="254"></label>
+          <label><span>Notes</span><input id="aNotes" maxlength="500"></label>
+        </div>
+        <label class="chk"><input type="checkbox" id="aPaid"> Already paid</label>
+        <button type="submit">Add booking</button>
+      </form>
+    </section>
+
+    <section data-panel="rooms" hidden>
+      <div class="toolbar">
+        <label><span>Availability for night of</span><input type="date" id="rDate"></label>
+      </div>
+      <div class="err" id="roomsErr" hidden></div><div class="ok" id="roomsOk" hidden></div>
+      <div class="table-wrap rooms-table"><table>
+        <thead><tr><th>Room type</th><th>Price (GH&#8373;/night)</th><th>Total rooms</th><th>Free that night</th><th>Bookable online</th><th></th></tr></thead>
+        <tbody id="roomRows"></tbody>
+      </table></div>
+      <form class="card" id="rateForm" style="max-width:420px;margin-top:16px">
+        <h2>PayPal exchange rate</h2>
+        <p style="font-size:.86rem;color:var(--text2);margin-bottom:12px">PayPal charges in US dollars. Guests pay the cedi total divided by this rate.</p>
+        <label><span>Cedis per US$1</span><input id="rate" type="number" step="0.01" min="1"></label>
+        <button type="submit">Save rate</button>
+      </form>
+    </section>
+
+    <section data-panel="account" hidden>
+      <div class="two">
+        <form class="card" id="pwForm">
+          <h2>Change password</h2>
+          <div class="err" id="pwErr" hidden></div>
+          <label><span>Current password</span><input type="password" id="pwCur" autocomplete="current-password" required></label>
+          <label><span>New password (10+ characters)</span><input type="password" id="pwNew" minlength="10" autocomplete="new-password" required></label>
+          <button type="submit">Update password</button>
+        </form>
+        <form class="card" id="staffForm">
+          <h2>Add a staff login</h2>
+          <div class="err" id="staffErr" hidden></div><div class="ok" id="staffOk" hidden></div>
+          <label><span>Email</span><input type="email" id="sEmail" autocomplete="off" required></label>
+          <label><span>Temporary password (10+ characters)</span><input type="password" id="sPass" minlength="10" autocomplete="new-password" required></label>
+          <button type="submit">Add staff</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="drawer-bg" id="drawerBg" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Booking details">
+  <button class="ghost close" id="drawerClose">Close</button>
+  <div id="drawerBody"></div>
+</aside>
+
+<script src="js/admin.js" defer></script>
+</body>
+</html>

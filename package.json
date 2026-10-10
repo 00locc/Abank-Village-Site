@@ -1,0 +1,11 @@
+{
+  "name": "abank-village-site",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply abank-bookings --local",
+    "db:migrate:remote": "wrangler d1 migrations apply abank-bookings --remote",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": { "wrangler": "4.149.0" }
+}

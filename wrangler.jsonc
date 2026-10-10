@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "abank-village-site",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "abank-bookings",
+      "database_id": "bdbc1fd1-90f3-4ef7-8e3a-d8076ea5e81d",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "send_email": [{ "name": "EMAIL" }],
+  "triggers": { "crons": ["*/30 * * * *"] },
+  "vars": {
+    // "demo" = fake checkout for testing (never works on abankvillage.com). Switch to "live" before launch.
+    "PAYMENT_MODE": "demo",
+    "PAYPAL_ENV": "sandbox",
+    "SITE_URL": "",
+    "HOTEL_EMAIL": "stayabankvillage@gmail.com",
+    "EMAIL_FROM": "",
+    // Cloudflare's always-pass test key; replace with the real Turnstile site key before launch.
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+  },
+  "observability": { "enabled": true }
+}

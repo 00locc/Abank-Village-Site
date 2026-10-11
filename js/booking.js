@@ -13,7 +13,7 @@
     payPaystack: $("bkPayPaystack"), payPaypal: $("bkPayPaypal"),
   };
 
-  let cfg = null, avail = [], selected = null, tsWidget = null, tsToken = "", loadSeq = 0, busy = false;
+  let cfg = null, avail = [], selected = new URLSearchParams(location.search).get("room"), tsWidget = null, tsToken = "", loadSeq = 0, busy = false;
 
   const fmt = (n) => Number(n).toLocaleString("en-GH");
   const addDays = (s, n) => { const d = new Date(s + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };

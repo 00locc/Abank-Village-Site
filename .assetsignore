@@ -11,3 +11,5 @@ package-lock.json
 tests
 _card.html
 _300card.html
+.gitignore
+.assetsignore

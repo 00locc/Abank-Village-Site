@@ -445,11 +445,10 @@ async function logEvent(env, bookingId, actor, message, isPublic = true) {
 
 async function startPayment(env, url, booking, token) {
   const base = siteUrl(env, url);
-  if (isDemo(env, url)) {
-    return `${base}/api/pay/demo?ref=${booking.ref}&t=${encodeURIComponent(token)}`;
-  }
-  if (booking.provider === "paystack") return paystackInit(env, base, booking);
-  if (booking.provider === "paypal") return paypalCreate(env, base, booking, token);
+  // Real provider whenever its keys are configured; otherwise the preview-only simulated checkout.
+  if (booking.provider === "paystack" && env.PAYSTACK_SECRET_KEY) return paystackInit(env, base, booking);
+  if (booking.provider === "paypal" && env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET) return paypalCreate(env, base, booking, token);
+  if (isDemo(env, url)) return `${base}/api/pay/demo?ref=${booking.ref}&t=${encodeURIComponent(token)}`;
   throw new HttpError(400, "Unknown payment method.");
 }
 

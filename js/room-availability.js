@@ -1,10 +1,8 @@
-// Menu: "Sign In" for visitors, "My Bookings" once signed in.
+// Menu: "My Bookings" appears only once the guest is signed in.
 (function () {
-  const link = document.getElementById("navAccount");
-  if (!link) return;
-  fetch("/api/guest/me", { credentials: "same-origin" }).then((r) => {
-    if (r.ok) { link.textContent = "My Bookings"; link.href = "my-bookings.html"; }
-  }).catch(() => {});
+  const item = document.getElementById("navAccountItem");
+  if (!item) return;
+  fetch("/api/guest/me", { credentials: "same-origin" }).then((r) => { if (r.ok) item.hidden = false; }).catch(() => {});
 })();
 
 // Shows tonight's availability on the home page room cards.

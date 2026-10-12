@@ -490,8 +490,15 @@ function providerLabel(p) {
   return { paystack: "Mobile Money / Card (Paystack)", paypal: "PayPal", demo: "Demo", manual: "Hotel desk" }[p] || p;
 }
 
+// Sends the guest to their booking page. Called only from payment returns; if the booking was just paid,
+// the guest is also signed in to My Bookings on this device (no account or password needed).
 async function statusRedirect(env, url, ref) {
-  return redirect(`${siteUrl(env, url)}/booking-status.html?ref=${ref}&t=${encodeURIComponent(await guestToken(env, ref))}`);
+  const res = redirect(`${siteUrl(env, url)}/booking-status.html?ref=${ref}&t=${encodeURIComponent(await guestToken(env, ref))}`);
+  const b = await env.DB.prepare("SELECT email, payment_status, updated_at FROM bookings WHERE ref = ?1").bind(ref).first();
+  if (b && b.email && b.payment_status === "paid" && Date.now() - b.updated_at < 30 * 60000) {
+    res.headers.append("set-cookie", await newGuestSession(env, b.email));
+  }
+  return res;
 }
 
 // Paystack — supports MTN MoMo, Telecel Cash, AirtelTigo Money and cards in GHS.
@@ -745,6 +752,14 @@ const GUEST_COOKIE = "__Host-av_guest";
 const GUEST_LINK_MINUTES = 30;
 const GUEST_SESSION_DAYS = 7;
 
+// Creates a My Bookings session for this email and returns the Set-Cookie header value.
+async function newGuestSession(env, email) {
+  const session = b64url(randomBytes(32));
+  await env.DB.prepare("INSERT INTO guest_sessions (token_hash, email, expires_at) VALUES (?1, ?2, ?3)")
+    .bind(await sha256Hex(session), email, Date.now() + GUEST_SESSION_DAYS * 86400000).run();
+  return `${GUEST_COOKIE}=${session}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${GUEST_SESSION_DAYS * 86400}`;
+}
+
 async function currentGuest(request, env) {
   const tok = getCookie(request, GUEST_COOKIE);
   if (!tok || tok.length > 100) return null;
@@ -793,10 +808,7 @@ async function guestRoute(request, env, ctx, url) {
     const row = await env.DB.prepare("DELETE FROM guest_tokens WHERE token_hash = ?1 AND expires_at > ?2 RETURNING email")
       .bind(await sha256Hex(token), Date.now()).first();
     if (!row) throw new HttpError(400, "This sign-in link has expired or was already used. Request a new one.");
-    const session = b64url(randomBytes(32));
-    await env.DB.prepare("INSERT INTO guest_sessions (token_hash, email, expires_at) VALUES (?1, ?2, ?3)")
-      .bind(await sha256Hex(session), row.email, Date.now() + GUEST_SESSION_DAYS * 86400000).run();
-    return json({ ok: true, email: row.email }, 200, { "set-cookie": `${GUEST_COOKIE}=${session}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${GUEST_SESSION_DAYS * 86400}` });
+    return json({ ok: true, email: row.email }, 200, { "set-cookie": await newGuestSession(env, row.email) });
   }
 
   if (p === "/logout" && m === "POST") {

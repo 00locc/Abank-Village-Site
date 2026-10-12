@@ -63,6 +63,8 @@ async function route(request, env, ctx, url) {
   if (mm && m === "GET") return getBookingByToken(env, mm[1], url.searchParams.get("t") || "");
   mm = p.match(/^\/api\/bookings\/(AV-[A-Z0-9]{6})\/pay$/);
   if (mm && m === "POST") return retryPayment(request, env, url, mm[1]);
+  mm = p.match(/^\/api\/bookings\/(AV-[A-Z0-9]{6})\/cancel$/);
+  if (mm && m === "POST") return guestCancel(request, env, ctx, url, mm[1]);
 
   if (p === "/api/pay/paystack/callback" && m === "GET") return paystackCallback(env, ctx, url);
   if (p === "/api/pay/paystack/webhook" && m === "POST") return paystackWebhook(request, env, ctx);
@@ -229,6 +231,10 @@ function validateStay(checkIn, checkOut) {
   if (nights < 1) throw new HttpError(400, "Check-out must be at least one day after check-in.");
   if (nights > MAX_NIGHTS) throw new HttpError(400, `Online bookings are limited to ${MAX_NIGHTS} nights. Call us for longer stays.`);
   return nights;
+}
+
+function fmtDeadline(b) {
+  return new Date(cancelDeadline(b)).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC" }) + " (Ghana time)";
 }
 
 function fmtDate(s) {
@@ -418,6 +424,7 @@ async function publicBooking(env, b) {
     nights: b.nights, rooms: b.rooms, guest_name: b.guest_name, email: b.email, phone: b.phone,
     amount_ghs: b.amount_ghs, provider: b.provider, status: b.status, payment_status: b.payment_status,
     hold_expires_at: b.status === "pending_payment" ? b.hold_expires_at : null,
+    cancel_deadline: cancelDeadline(b), can_cancel: canGuestCancel(b),
     created_at: b.created_at, events: events.results,
   };
 }
@@ -442,6 +449,100 @@ async function lookupBooking(request, env) {
 async function logEvent(env, bookingId, actor, message, isPublic = true) {
   await env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, message, public) VALUES (?1, ?2, ?3, ?4, ?5)")
     .bind(bookingId, Date.now(), actor, message, isPublic ? 1 : 0).run();
+}
+
+// ───────────────────────── guest cancellation ─────────────────────────
+// Free cancellation with an automatic full refund until 48 hours before check-in (check-in is 12:00 PM Ghana time).
+
+const CANCEL_HOURS_BEFORE = 48;
+
+function cancelDeadline(b) {
+  return Date.parse(b.check_in + "T12:00:00Z") - CANCEL_HOURS_BEFORE * 3600000;
+}
+
+function canGuestCancel(b) {
+  if (b.status === "pending_payment" && b.payment_status === "unpaid") return true;
+  return b.status === "confirmed" && b.payment_status === "paid" && Date.now() < cancelDeadline(b);
+}
+
+async function guestCancel(request, env, ctx, url, ref) {
+  await rateLimit(env, "cancel:" + clientIp(request), 10, 3600000);
+  const body = await readJson(request);
+  const b = await bookingForToken(env, ref, body.t);
+  if (!canGuestCancel(b)) {
+    throw new HttpError(400, b.status === "confirmed" && Date.now() >= cancelDeadline(b)
+      ? `Online cancellation closes ${CANCEL_HOURS_BEFORE} hours before check-in. Please call 0262 226 592.`
+      : "This booking can't be cancelled online. Please call 0262 226 592.");
+  }
+  const now = Date.now();
+
+  if (b.payment_status === "unpaid") {
+    await env.DB.prepare("UPDATE bookings SET status = 'cancelled', updated_at = ?2 WHERE id = ?1 AND status = 'pending_payment'").bind(b.id, now).run();
+    await logEvent(env, b.id, "guest", "Booking cancelled by guest before payment.");
+    return json({ ok: true, refunded: false });
+  }
+
+  // Claim the cancellation atomically so a double-click can't refund twice.
+  const claim = await env.DB.prepare(
+    "UPDATE bookings SET status = 'cancelled', updated_at = ?2 WHERE id = ?1 AND status = 'confirmed' AND payment_status = 'paid'"
+  ).bind(b.id, now).run();
+  if (!claim.meta.changes) throw new HttpError(409, "This booking was already updated. Refresh the page.");
+  await logEvent(env, b.id, "guest", "Booking cancelled by guest. Room released.");
+
+  let result;
+  try { result = await refundPayment(env, b); }
+  catch (e) { console.error("Refund failed", b.ref, e.message); result = { ok: false, detail: e.message }; }
+
+  const amount = b.pay_currency === "USD" ? `US$${(b.pay_amount_minor / 100).toFixed(2)}` : `GH₵ ${b.amount_ghs.toLocaleString()}`;
+  if (result.ok) {
+    await env.DB.prepare("UPDATE bookings SET payment_status = 'refunded', updated_at = ?2 WHERE id = ?1").bind(b.id, Date.now()).run();
+    const when = b.provider === "paypal" ? "PayPal usually shows it within a few days." : "Mobile Money refunds usually arrive within a few days; card refunds can take up to 10 working days.";
+    const msg = `Your booking has been cancelled and a full refund of ${amount} has been issued. ${when}`;
+    await logEvent(env, b.id, "system", msg);
+    await logEvent(env, b.id, "system", `Refund reference: ${result.ref || "n/a"}`, false);
+    ctx.waitUntil(sendStatusEmail(env, b, msg));
+    ctx.waitUntil(notifyHotel(env, `Guest cancelled ${b.ref} (refunded)`,
+      `${b.guest_name} cancelled booking ${b.ref} (${b.check_in} to ${b.check_out}). ${amount} was refunded automatically via ${providerLabel(b.provider)}. The room is available again.`));
+    return json({ ok: true, refunded: true });
+  }
+  const msg = `Your booking has been cancelled. We'll refund ${amount} to you shortly — our team has been notified.`;
+  await logEvent(env, b.id, "system", msg);
+  await logEvent(env, b.id, "system", `Automatic refund failed: ${result.detail || "unknown error"}`, false);
+  ctx.waitUntil(sendStatusEmail(env, b, msg));
+  ctx.waitUntil(notifyHotel(env, `ACTION NEEDED: refund ${b.ref} manually`,
+    `${b.guest_name} (${b.phone}, ${b.email}) cancelled booking ${b.ref}, but the automatic refund of ${amount} via ${providerLabel(b.provider)} failed. Please refund them in the ${providerLabel(b.provider)} dashboard, then press "Mark refunded" in the admin dashboard.`));
+  return json({ ok: true, refunded: false });
+}
+
+// Full refund through whichever provider took the payment.
+async function refundPayment(env, b) {
+  if (!b.provider_ref || String(b.provider_ref).startsWith("demo-")) return { ok: true, ref: "demo" }; // preview test payments
+  if (b.provider === "paystack") {
+    const r = await fetch("https://api.paystack.co/refund", {
+      method: "POST",
+      headers: { authorization: `Bearer ${requireSecret(env, "PAYSTACK_SECRET_KEY")}`, "content-type": "application/json" },
+      body: JSON.stringify({ transaction: b.provider_ref }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.status) return { ok: false, detail: d.message || `Paystack ${r.status}` };
+    return { ok: true, ref: String(d.data?.id || "") };
+  }
+  if (b.provider === "paypal") {
+    const access = await paypalToken(env);
+    const or = await fetch(`${paypalBase(env)}/v2/checkout/orders/${encodeURIComponent(b.provider_ref)}`, { headers: { authorization: `Bearer ${access}` } });
+    const order = await or.json();
+    const capture = order?.purchase_units?.[0]?.payments?.captures?.[0];
+    if (!or.ok || !capture) return { ok: false, detail: "PayPal capture not found" };
+    const r = await fetch(`${paypalBase(env)}/v2/payments/captures/${capture.id}/refund`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${access}`, "content-type": "application/json", "paypal-request-id": `refund-${b.ref}` },
+      body: "{}",
+    });
+    const d = await r.json();
+    if (!r.ok || !["COMPLETED", "PENDING"].includes(d.status)) return { ok: false, detail: d.message || d.name || `PayPal ${r.status}` };
+    return { ok: true, ref: d.id };
+  }
+  return { ok: false, detail: "No online payment to refund" };
 }
 
 // ───────────────────────── payments ─────────────────────────
@@ -727,12 +828,13 @@ async function sendConfirmationEmails(env, b) {
   ];
   const text = `Hi ${b.guest_name},\n\nYour stay at Abank Village Guest House is confirmed.\n\n` +
     rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
-    `\n\nCheck your booking status anytime: ${link}\n\nQuestions? Call 0262 226 592 or 0233 344 425.\n\nAbank Village Guest House, near KNUST-Emena, Kumasi`;
+    `\n\nCheck your booking status anytime: ${link}\n\nFree cancellation with a full refund until ${fmtDeadline(b)}. To cancel: ${link}&cancel=1\n\nQuestions? Call 0262 226 592 or 0233 344 425.\n\nAbank Village Guest House, near KNUST-Emena, Kumasi`;
   const html = `<div style="font-family:Arial,sans-serif;color:#12293C;max-width:520px">
 <h2 style="color:#17588C;margin:0 0 8px">Your stay is confirmed</h2><p>Hi ${escapeHtml(b.guest_name)}, thank you for booking with Abank Village Guest House.</p>
 <table style="border-collapse:collapse;width:100%;font-size:14px">${rows.map(([k, v]) =>
     `<tr><td style="padding:8px 0;color:#7C93A5;border-bottom:1px solid #E4EFF6">${k}</td><td style="padding:8px 0;font-weight:600;text-align:right;border-bottom:1px solid #E4EFF6">${escapeHtml(v)}</td></tr>`).join("")}</table>
 <p style="margin:22px 0"><a href="${escapeHtml(link)}" style="background:#17588C;color:#fff;padding:12px 26px;border-radius:30px;text-decoration:none;font-weight:600">View booking status</a></p>
+<p style="font-size:13px;color:#34566F">Free cancellation with a full refund until ${escapeHtml(fmtDeadline(b))}. <a href="${escapeHtml(link)}&cancel=1" style="color:#8A1F17">Cancel booking</a></p>
 <p style="font-size:13px;color:#34566F">Questions? Call <a href="tel:0262226592">0262 226 592</a> or <a href="tel:0233344425">0233 344 425</a>.<br>Abank Village Guest House, near KNUST-Emena, Kumasi</p></div>`;
   await sendEmail(env, b.email, `Booking confirmed — ${b.ref}`, text, html);
   await notifyHotel(env, `New booking ${b.ref}: ${rt?.name || b.room_type_id}, ${b.check_in} → ${b.check_out}`,
@@ -983,6 +1085,23 @@ async function adminRoute(request, env, ctx, url) {
     if (!b) throw new HttpError(404, "Not found");
     const note = cleanText(body.note, 300);
     const notify = body.notify !== false;
+    // Cancel and refund automatically through PayPal/Paystack.
+    if (body.action === "cancel_refund") {
+      if (b.payment_status !== "paid") throw new HttpError(400, "This booking has no payment to refund.");
+      const claim = await env.DB.prepare("UPDATE bookings SET status = CASE WHEN status = 'completed' THEN status ELSE 'cancelled' END, updated_at = ?2 WHERE id = ?1 AND payment_status = 'paid'").bind(id, Date.now()).run();
+      if (!claim.meta.changes) throw new HttpError(409, "Booking already updated — refresh.");
+      let r;
+      try { r = await refundPayment(env, b); } catch (e) { r = { ok: false, detail: e.message }; }
+      if (!r.ok) {
+        await logEvent(env, id, actor, `Booking cancelled. Automatic refund failed: ${r.detail}`, false);
+        throw new HttpError(502, `Booking cancelled, but the automatic refund failed (${r.detail}). Refund in the ${providerLabel(b.provider)} dashboard, then press "Mark refunded".`);
+      }
+      await env.DB.prepare("UPDATE bookings SET payment_status = 'refunded', updated_at = ?2 WHERE id = ?1").bind(id, Date.now()).run();
+      const msg = "Your booking has been cancelled and a full refund has been issued." + (note ? " " + note : "");
+      await logEvent(env, id, actor, msg);
+      if (notify) ctx.waitUntil(sendStatusEmail(env, b, msg));
+      return json({ ok: true });
+    }
     if (body.payment_status === "refunded") {
       if (b.payment_status !== "paid") throw new HttpError(400, "Only paid bookings can be marked refunded.");
       await env.DB.prepare("UPDATE bookings SET payment_status = 'refunded', status = CASE WHEN status IN ('completed') THEN status ELSE 'cancelled' END, updated_at = ?2 WHERE id = ?1").bind(id, Date.now()).run();

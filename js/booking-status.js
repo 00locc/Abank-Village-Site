@@ -57,6 +57,23 @@
     row(dl, "Payment", { paid: "Received ✓", unpaid: "Not paid yet", refunded: "Refunded" }[b.payment_status] || b.payment_status);
     row(dl, b.payment_status === "paid" ? "Total paid" : b.payment_status === "refunded" ? "Refunded" : "Total due", "GH₵ " + Number(b.amount_ghs).toLocaleString("en-GH"));
     $("payActions").hidden = !(b.status === "pending_payment" && b.payment_status === "unpaid");
+    const box = $("cancelBox");
+    box.hidden = !b.can_cancel;
+    if (b.can_cancel) {
+      const dl2 = new Date(b.cancel_deadline).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC" }) + " Ghana time";
+      $("cancelText").textContent = b.payment_status === "paid"
+        ? `Free cancellation until ${dl2}. You'll get a full refund of GH₵ ${Number(b.amount_ghs).toLocaleString("en-GH")} automatically.`
+        : "Changed your mind? You can cancel this unpaid booking.";
+      if (params.get("cancel") && !box.dataset.shown) {
+        box.dataset.shown = "1";
+        box.classList.add("highlight");
+        box.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    } else if (b.status === "confirmed" && b.payment_status === "paid") {
+      // Past the deadline: say so instead of showing the button.
+      box.hidden = false; $("cancelBtn").hidden = true;
+      $("cancelText").textContent = "Online cancellation has closed (48 hours before check-in). To change or cancel, call 0262 226 592.";
+    }
     const ev = $("vEvents"); ev.innerHTML = "";
     b.events.slice().reverse().forEach((e) => {
       const li = document.createElement("li");
@@ -106,6 +123,19 @@
       document.querySelectorAll("#payActions button").forEach((x) => (x.disabled = false));
     }
   }));
+
+  $("cancelBtn").addEventListener("click", async () => {
+    const paid = /full refund/.test($("cancelText").textContent);
+    if (!window.confirm(paid ? "Cancel this booking? You'll receive a full refund and the room will be released." : "Cancel this booking?")) return;
+    const btn = $("cancelBtn"), err = $("cancelErr");
+    err.hidden = true; btn.disabled = true; btn.textContent = "Cancelling…";
+    try {
+      await api(`/api/bookings/${encodeURIComponent(ref)}/cancel`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t: token }) });
+      history.replaceState(null, "", `?ref=${ref}&t=${encodeURIComponent(token)}`);
+      await load();
+    } catch (e) { err.textContent = e.message; err.hidden = false; }
+    finally { btn.disabled = false; btn.textContent = "Cancel booking"; }
+  });
 
   if (params.get("cancelled")) $("cancelNote").hidden = false;
   if (ref && token) load();

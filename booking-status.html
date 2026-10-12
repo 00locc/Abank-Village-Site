@@ -50,6 +50,12 @@
   .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
   .help { font-size:.86rem; color:var(--text2); line-height:1.7; }
   .help a { color:var(--blue); font-weight:600; text-decoration:none; }
+  .cancel-box { margin-top:18px; padding-top:16px; border-top:1px solid var(--off2); }
+  .cancel-box .help { margin-bottom:12px; }
+  .btn.danger { background:#FDECEA; color:#8A1F17; }
+  .btn.danger:hover { background:#F8D4CF; }
+  .cancel-box.highlight { animation: pulse 1.6s ease 2; }
+  @keyframes pulse { 0%,100% { background:transparent; } 50% { background:#FFF4D6; } }
   [hidden] { display:none !important; }
 </style>
 </head>
@@ -81,6 +87,11 @@
       <div class="actions" id="payActions" hidden>
         <button type="button" data-provider="paystack" id="payPaystack">Pay with Mobile Money / Card</button>
         <button type="button" data-provider="paypal" class="btn secondary" id="payPaypal">Pay with PayPal</button>
+      </div>
+      <div class="cancel-box" id="cancelBox" hidden>
+        <p class="help" id="cancelText"></p>
+        <div class="err" id="cancelErr" hidden></div>
+        <button type="button" class="btn danger" id="cancelBtn">Cancel booking</button>
       </div>
     </div>
     <div class="card">

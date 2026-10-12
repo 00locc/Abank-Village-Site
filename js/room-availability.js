@@ -1,3 +1,12 @@
+// Menu: "Sign In" for visitors, "My Bookings" once signed in.
+(function () {
+  const link = document.getElementById("navAccount");
+  if (!link) return;
+  fetch("/api/guest/me", { credentials: "same-origin" }).then((r) => {
+    if (r.ok) { link.textContent = "My Bookings"; link.href = "my-bookings.html"; }
+  }).catch(() => {});
+})();
+
 // Shows tonight's availability on the home page room cards.
 (function () {
   "use strict";

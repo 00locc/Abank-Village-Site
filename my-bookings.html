@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Bookings | Abank Village Guest House</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="images/abank-village-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --blue:#17588C; --blue2:#3E86BE; --blue3:#A9CDE6; --pale:#E7F1F9; --faint:#F3F8FC; --dark:#0E2436; --dark2:#1C4363; --text:#12293C; --text2:#34566F; --muted:#7C93A5; --white:#FCFDFE; --off:#F5FAFD; --off2:#E4EFF6; --off3:#CFE0EC; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Jost',sans-serif; background:var(--off); color:var(--text); min-height:100vh; }
+  header { background:var(--white); border-bottom:1px solid var(--off3); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .logo { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--dark); font-family:'Josefin Sans',sans-serif; font-weight:700; letter-spacing:.04em; }
+  .logo img { height:38px; }
+  header a.back { color:var(--blue); font-size:.8rem; font-weight:600; text-decoration:none; letter-spacing:.08em; text-transform:uppercase; }
+  main { max-width:640px; margin:0 auto; padding:40px 16px 60px; }
+  h1 { font-family:'Josefin Sans',sans-serif; font-size:clamp(1.6rem,4vw,2.2rem); color:var(--dark); margin-bottom:6px; letter-spacing:.02em; }
+  .sub { color:var(--text2); margin-bottom:26px; font-size:.95rem; }
+  .card { background:var(--white); border:1px solid var(--off3); border-radius:20px; padding:26px; box-shadow:0 10px 40px rgba(14,36,54,.07); margin-bottom:18px; }
+  label { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  label span { font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  input { font:inherit; font-size:.95rem; padding:11px 13px; border:1.5px solid var(--off3); border-radius:12px; background:var(--off); color:var(--text); }
+  input:focus { outline:none; border-color:var(--blue2); box-shadow:0 0 0 3px rgba(62,134,190,.18); background:var(--white); }
+  button, .btn { display:inline-block; text-align:center; background:var(--blue); color:var(--white); border:0; border-radius:30px; padding:13px 26px; font:inherit; font-weight:600; font-size:.82rem; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; text-decoration:none; }
+  button:hover, .btn:hover { background:var(--dark2); }
+  button:disabled { background:var(--off3); color:var(--muted); cursor:wait; }
+  .btn.secondary { background:var(--pale); color:var(--dark); }
+  .err { background:#FDECEA; color:#8A1F17; border:1px solid #F3C1BB; border-radius:12px; padding:11px 14px; font-size:.88rem; margin-bottom:14px; }
+  .note { background:#FFF4D6; color:#6B4E00; border:1px solid #F0D58A; border-radius:12px; padding:11px 14px; font-size:.88rem; margin-bottom:16px; }
+  .status { display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; padding:7px 14px; border-radius:30px; }
+  .s-confirmed, .s-checked_in { background:#E3F4EA; color:#1D6B3A; }
+  .s-completed { background:var(--pale); color:var(--dark2); }
+  .s-pending_payment { background:#FFF4D6; color:#7A5A00; }
+  .s-cancelled, .s-expired, .s-payment_conflict { background:#FDECEA; color:#8A1F17; }
+  .ref { font-family:'Josefin Sans',sans-serif; font-size:1.5rem; color:var(--blue); letter-spacing:.06em; margin:14px 0 4px; }
+  dl { display:grid; grid-template-columns:auto 1fr; gap:0; margin-top:16px; }
+  dt, dd { padding:10px 0; border-bottom:1px solid var(--off2); font-size:.92rem; }
+  dt { color:var(--muted); padding-right:16px; }
+  dd { text-align:right; font-weight:600; color:var(--dark); }
+  .timeline { list-style:none; margin-top:6px; }
+  .timeline li { position:relative; padding:0 0 16px 22px; font-size:.9rem; color:var(--text2); }
+  .timeline li::before { content:''; position:absolute; left:4px; top:7px; width:9px; height:9px; border-radius:50%; background:var(--blue2); }
+  .timeline li::after { content:''; position:absolute; left:8px; top:18px; bottom:2px; width:1px; background:var(--off3); }
+  .timeline li:last-child::after { display:none; }
+  .timeline time { display:block; font-size:.74rem; color:var(--muted); }
+  h2 { font-family:'Josefin Sans',sans-serif; font-size:1.05rem; color:var(--dark); margin-bottom:12px; letter-spacing:.03em; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+  .help { font-size:.86rem; color:var(--text2); line-height:1.7; }
+  .help a { color:var(--blue); font-weight:600; text-decoration:none; }
+  [hidden] { display:none !important; }
+
+  .bk-list { display:grid; gap:12px; }
+  .bk-item { display:grid; grid-template-columns:1fr auto; gap:6px 14px; align-items:center; background:var(--white); border:1px solid var(--off3); border-radius:16px; padding:18px; text-decoration:none; color:inherit; transition:border-color .2s, transform .2s; }
+  .bk-item:hover { border-color:var(--blue2); transform:translateY(-2px); }
+  .bk-item .room { font-weight:600; color:var(--dark); }
+  .bk-item .dates { font-size:.86rem; color:var(--text2); }
+  .bk-item .meta { font-size:.78rem; color:var(--muted); }
+  .bk-item .right { text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  .bk-item .amt { font-weight:600; color:var(--blue); }
+  .section-h { font-family:'Josefin Sans',sans-serif; font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:26px 0 10px; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .linkbtn { background:none; color:var(--blue); padding:0; font-size:.8rem; letter-spacing:.08em; }
+  .linkbtn:hover { background:none; text-decoration:underline; }
+  .ts { margin-bottom:12px; }
+  .empty { color:var(--text2); font-size:.92rem; }
+  @media (max-width:520px) { .bk-item { grid-template-columns:1fr; } .bk-item .right { align-items:flex-start; text-align:left; flex-direction:row; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/"><img src="images/abank-village-logo.png" alt="">Abank Village</a>
+  <a class="back" href="book.html">Book a room &rarr;</a>
+</header>
+<main>
+  <h1>My bookings</h1>
+  <p class="sub" id="sub">Enter the email you booked with and we'll send you a secure sign-in link. No password needed.</p>
+
+  <form class="card" id="loginForm">
+    <div class="err" id="loginErr" hidden></div>
+    <div class="note" id="loginOk" hidden></div>
+    <label><span>Email</span><input id="email" type="email" maxlength="254" autocomplete="email" required></label>
+    <div class="ts" id="ts"></div>
+    <button type="submit" id="loginBtn">Email me a sign-in link</button>
+    <p class="help" style="margin-top:14px">Have your booking reference? <a href="booking-status.html">Look up a single booking</a>.</p>
+  </form>
+
+  <div class="card" id="signingIn" hidden><p class="help">Signing you in&hellip;</p></div>
+
+  <div id="listView" hidden>
+    <div class="row"><span class="help" id="who"></span><button class="linkbtn" id="logoutBtn" type="button">Sign out</button></div>
+    <div class="err" id="listErr" hidden></div>
+    <p class="section-h" id="upH">Upcoming</p><div class="bk-list" id="upcoming"></div>
+    <p class="section-h" id="pastH">Past &amp; cancelled</p><div class="bk-list" id="past"></div>
+  </div>
+</main>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script src="js/my-bookings.js" defer></script>
+</body>
+</html>

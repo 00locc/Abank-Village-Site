@@ -42,6 +42,8 @@ export default {
     await env.DB.batch([
       env.DB.prepare("UPDATE bookings SET status = 'expired', updated_at = ?1 WHERE status = 'pending_payment' AND hold_expires_at < ?2").bind(now, now - 30 * 60000),
       env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?1").bind(now),
+      env.DB.prepare("DELETE FROM guest_sessions WHERE expires_at < ?1").bind(now),
+      env.DB.prepare("DELETE FROM guest_tokens WHERE expires_at < ?1").bind(now),
       env.DB.prepare("DELETE FROM rate_limits WHERE window_start < ?1").bind(now - 24 * 3600000),
     ]);
   },
@@ -68,6 +70,7 @@ async function route(request, env, ctx, url) {
   if (p === "/api/pay/paypal/cancel" && m === "GET") return paypalCancel(env, url);
   if (p === "/api/pay/demo") return demoPay(request, env, ctx, url);
 
+  if (p.startsWith("/api/guest/")) return guestRoute(request, env, ctx, url);
   if (p.startsWith("/api/admin/")) return adminRoute(request, env, ctx, url);
   throw new HttpError(404, "Not found");
 }
@@ -683,13 +686,23 @@ button{width:100%;padding:13px;border-radius:30px;border:0;font-size:15px;font-w
 
 // ───────────────────────── email ─────────────────────────
 
+// Sends via Resend (https://resend.com). Returns true if the email was accepted.
 async function sendEmail(env, to, subject, text, html) {
-  if (!env.EMAIL || !env.EMAIL_FROM) { console.log(`[email skipped] ${subject} -> ${to}`); return; }
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM || !to) { console.log(`[email skipped] ${subject} -> ${to}`); return false; }
   try {
-    await env.EMAIL.send({ from: { email: env.EMAIL_FROM, name: "Abank Village Guest House" }, to, subject, text, html,
-      replyTo: env.HOTEL_EMAIL || undefined });
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        from: `Abank Village Guest House <${env.EMAIL_FROM}>`, to: [to], subject, text, html,
+        reply_to: env.HOTEL_EMAIL || undefined,
+      }),
+    });
+    if (!r.ok) { console.error("Email send failed", r.status, await r.text()); return false; }
+    return true;
   } catch (e) {
-    console.error("Email send failed", e.code || "", e.message);
+    console.error("Email send failed", e.message);
+    return false;
   }
 }
 
@@ -724,6 +737,87 @@ async function sendStatusEmail(env, b, message) {
   await sendEmail(env, b.email, `Booking update — ${b.ref}`,
     `Hi ${b.guest_name},\n\n${message}\n\nView your booking: ${link}\n\nAbank Village Guest House — 0262 226 592`,
     `<div style="font-family:Arial,sans-serif;color:#12293C"><p>Hi ${escapeHtml(b.guest_name)},</p><p>${escapeHtml(message)}</p><p><a href="${escapeHtml(link)}">View your booking</a></p><p style="font-size:13px;color:#34566F">Abank Village Guest House — 0262 226 592</p></div>`);
+}
+
+// ───────────────────────── guest "My bookings" (emailed sign-in link, no passwords) ─────────────────────────
+
+const GUEST_COOKIE = "__Host-av_guest";
+const GUEST_LINK_MINUTES = 30;
+const GUEST_SESSION_DAYS = 7;
+
+async function currentGuest(request, env) {
+  const tok = getCookie(request, GUEST_COOKIE);
+  if (!tok || tok.length > 100) return null;
+  return env.DB.prepare("SELECT email FROM guest_sessions WHERE token_hash = ?1 AND expires_at > ?2")
+    .bind(await sha256Hex(tok), Date.now()).first();
+}
+
+async function guestRoute(request, env, ctx, url) {
+  const p = url.pathname.slice("/api/guest".length);
+  const m = request.method;
+  checkOrigin(request, url);
+
+  // Step 1: guest asks for a sign-in link. Same answer whether or not the email has bookings.
+  if (p === "/login" && m === "POST") {
+    const ip = clientIp(request);
+    await rateLimit(env, "guest-login-ip:" + ip, 10, 3600000);
+    const body = await readJson(request);
+    const email = cleanText(body.email, 254).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new HttpError(400, "Please enter a valid email address.");
+    await rateLimit(env, "guest-login-email:" + email, 5, 3600000);
+    await verifyTurnstile(env, body.turnstile_token, ip);
+    const has = await env.DB.prepare("SELECT 1 FROM bookings WHERE email = ?1 AND status != 'expired' LIMIT 1").bind(email).first();
+    const reply = { ok: true, message: "If that email has bookings with us, a sign-in link is on its way. It works for 30 minutes." };
+    if (!has) return json(reply);
+    const token = b64url(randomBytes(32));
+    await env.DB.prepare("INSERT INTO guest_tokens (token_hash, email, expires_at) VALUES (?1, ?2, ?3)")
+      .bind(await sha256Hex(token), email, Date.now() + GUEST_LINK_MINUTES * 60000).run();
+    const link = `${siteUrl(env, url)}/my-bookings.html#token=${token}`;
+    const sent = await sendEmail(env, email, "Your Abank Village sign-in link",
+      `Use this link to see your bookings at Abank Village Guest House:\n\n${link}\n\nIt works once and expires in ${GUEST_LINK_MINUTES} minutes. If you didn't ask for it, you can ignore this email.`,
+      `<div style="font-family:Arial,sans-serif;color:#12293C;max-width:520px"><h2 style="color:#17588C">Sign in to see your bookings</h2>
+<p>Tap the button below to see your bookings at Abank Village Guest House.</p>
+<p style="margin:22px 0"><a href="${escapeHtml(link)}" style="background:#17588C;color:#fff;padding:12px 26px;border-radius:30px;text-decoration:none;font-weight:600">View my bookings</a></p>
+<p style="font-size:13px;color:#34566F">The link works once and expires in ${GUEST_LINK_MINUTES} minutes. If you didn't ask for it, ignore this email.</p></div>`);
+    // Preview only: show the link on screen when email isn't set up, so the flow can be tested.
+    if (!sent && isDemo(env, url)) reply.preview_link = link;
+    return json(reply);
+  }
+
+  // Step 2: the link from the email is exchanged (once) for a session cookie.
+  if (p === "/session" && m === "POST") {
+    await rateLimit(env, "guest-session:" + clientIp(request), 30, 3600000);
+    const body = await readJson(request);
+    const token = String(body.token || "");
+    if (token.length < 20 || token.length > 100) throw new HttpError(400, "This sign-in link is invalid.");
+    const row = await env.DB.prepare("DELETE FROM guest_tokens WHERE token_hash = ?1 AND expires_at > ?2 RETURNING email")
+      .bind(await sha256Hex(token), Date.now()).first();
+    if (!row) throw new HttpError(400, "This sign-in link has expired or was already used. Request a new one.");
+    const session = b64url(randomBytes(32));
+    await env.DB.prepare("INSERT INTO guest_sessions (token_hash, email, expires_at) VALUES (?1, ?2, ?3)")
+      .bind(await sha256Hex(session), row.email, Date.now() + GUEST_SESSION_DAYS * 86400000).run();
+    return json({ ok: true, email: row.email }, 200, { "set-cookie": `${GUEST_COOKIE}=${session}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${GUEST_SESSION_DAYS * 86400}` });
+  }
+
+  if (p === "/logout" && m === "POST") {
+    const tok = getCookie(request, GUEST_COOKIE);
+    if (tok) await env.DB.prepare("DELETE FROM guest_sessions WHERE token_hash = ?1").bind(await sha256Hex(tok)).run();
+    return json({ ok: true }, 200, { "set-cookie": `${GUEST_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
+  }
+
+  if (p === "/bookings" && m === "GET") {
+    const guest = await currentGuest(request, env);
+    if (!guest) throw new HttpError(401, "Please sign in.");
+    const rows = await env.DB.prepare(
+      `SELECT b.ref, b.check_in, b.check_out, b.nights, b.rooms, b.amount_ghs, b.status, b.payment_status, rt.name AS room
+       FROM bookings b JOIN room_types rt ON rt.id = b.room_type_id
+       WHERE b.email = ?1 AND b.status != 'expired' ORDER BY b.check_in DESC LIMIT 100`
+    ).bind(guest.email).all();
+    const bookings = await Promise.all(rows.results.map(async (b) => ({ ...b, token: await guestToken(env, b.ref) })));
+    return json({ email: guest.email, today: todayGhana(), bookings });
+  }
+
+  throw new HttpError(404, "Not found");
 }
 
 // ───────────────────────── admin ─────────────────────────

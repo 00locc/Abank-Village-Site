@@ -168,6 +168,26 @@
   // If the guest comes back from a cancelled checkout, page shows normal state.
   window.addEventListener("pageshow", (e) => { if (e.persisted) { busy = false; update(); } });
 
+  // Returning guests who are signed in get their details filled in.
+  async function prefillGuest() {
+    try {
+      const me = await api("/api/guest/me", { credentials: "same-origin" });
+      if (!el.name.value) el.name.value = me.name || "";
+      if (!el.phone.value) el.phone.value = me.phone || "";
+      el.email.value = me.email;
+      $("bkGuestText").textContent = `Booking as ${me.name || me.email} (${me.email}).`;
+      $("bkGuest").hidden = false;
+    } catch (_) {
+      $("bkSignInHint").hidden = false;
+    }
+  }
+  $("bkSignOut").addEventListener("click", async (e) => {
+    e.preventDefault();
+    try { await fetch("/api/guest/logout", { method: "POST", headers: { "content-type": "application/json" }, body: "{}", credentials: "same-origin" }); } catch (_) {}
+    el.name.value = ""; el.phone.value = ""; el.email.value = "";
+    $("bkGuest").hidden = true; $("bkSignInHint").hidden = false;
+  });
+
   (async function init() {
     try {
       cfg = await api("/api/config");
@@ -186,6 +206,7 @@
     }
     el.inp.min = cfg.today;
     el.inp.max = addDays(cfg.today, 365);
+    prefillGuest();
     el.inp.value = cfg.today;
     el.out.value = addDays(cfg.today, 1);
     el.rooms.innerHTML = Array.from({ length: cfg.max_rooms }, (_, i) => `<option>${i + 1}</option>`).join("");

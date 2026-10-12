@@ -56,6 +56,8 @@
   .room-book-btn:hover { background: var(--dark2); }
   .room-book-btn.disabled { background: var(--offwhite3); color: var(--muted); pointer-events: none; }
   .bk { background: var(--white); color: var(--text); max-width: 760px; margin: 0 auto; text-align: left; border-radius: 24px; padding: 34px; box-shadow: 0 24px 70px rgba(14,36,54,0.3); }
+  .bk-guest { background: var(--orange-faint); border: 1px solid var(--offwhite3); color: var(--text2); border-radius: 12px; padding: 10px 14px; font-size: 0.86rem; margin-bottom: 16px; }
+  .bk-guest a { color: var(--orange); font-weight: 600; }
   .bk-demo { background: #FFF4D6; color: #6B4E00; border: 1px solid #F0D58A; border-radius: 12px; padding: 10px 14px; font-size: 0.82rem; font-weight: 500; margin-bottom: 22px; }
   .bk-step { margin-bottom: 26px; }
   .bk-step-title { font-family: 'Josefin Sans', sans-serif; font-weight: 700; font-size: 1.02rem; color: var(--dark); letter-spacing: 0.03em; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
@@ -122,6 +124,8 @@
 </section>
 <main class="book-page">
   <form class="bk" id="bookingForm" novalidate>
+    <div class="bk-guest" id="bkGuest" hidden><span id="bkGuestText"></span> <a href="#" id="bkSignOut">Not you?</a></div>
+    <div class="bk-guest" id="bkSignInHint" hidden>Booked with us before? <a href="my-bookings.html?next=book">Sign in</a> to fill in your details automatically.</div>
     <div class="bk-demo" id="bkDemo" hidden>Preview mode — payments are simulated, no real money is charged.</div>
 
     <div class="bk-step">

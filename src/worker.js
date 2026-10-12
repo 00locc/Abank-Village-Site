@@ -852,7 +852,7 @@ async function sendStatusEmail(env, b, message) {
 
 const GUEST_COOKIE = "__Host-av_guest";
 const GUEST_LINK_MINUTES = 30;
-const GUEST_SESSION_DAYS = 7;
+const GUEST_SESSION_DAYS = 30;
 
 // Creates a My Bookings session for this email and returns the Set-Cookie header value.
 async function newGuestSession(env, email) {
@@ -889,7 +889,7 @@ async function guestRoute(request, env, ctx, url) {
     const token = b64url(randomBytes(32));
     await env.DB.prepare("INSERT INTO guest_tokens (token_hash, email, expires_at) VALUES (?1, ?2, ?3)")
       .bind(await sha256Hex(token), email, Date.now() + GUEST_LINK_MINUTES * 60000).run();
-    const link = `${siteUrl(env, url)}/my-bookings.html#token=${token}`;
+    const link = `${siteUrl(env, url)}/my-bookings.html#token=${token}${body.next === "book" ? "&next=book" : ""}`;
     const sent = await sendEmail(env, email, "Your Abank Village sign-in link",
       `Use this link to see your bookings at Abank Village Guest House:\n\n${link}\n\nIt works once and expires in ${GUEST_LINK_MINUTES} minutes. If you didn't ask for it, you can ignore this email.`,
       `<div style="font-family:Arial,sans-serif;color:#12293C;max-width:520px"><h2 style="color:#17588C">Sign in to see your bookings</h2>
@@ -917,6 +917,14 @@ async function guestRoute(request, env, ctx, url) {
     const tok = getCookie(request, GUEST_COOKIE);
     if (tok) await env.DB.prepare("DELETE FROM guest_sessions WHERE token_hash = ?1").bind(await sha256Hex(tok)).run();
     return json({ ok: true }, 200, { "set-cookie": `${GUEST_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
+  }
+
+  // Details from the guest's latest booking, used to pre-fill the booking form.
+  if (p === "/me" && m === "GET") {
+    const guest = await currentGuest(request, env);
+    if (!guest) throw new HttpError(401, "Please sign in.");
+    const last = await env.DB.prepare("SELECT guest_name, phone FROM bookings WHERE email = ?1 ORDER BY id DESC LIMIT 1").bind(guest.email).first();
+    return json({ email: guest.email, name: last ? last.guest_name : "", phone: last ? last.phone : "" });
   }
 
   if (p === "/bookings" && m === "GET") {

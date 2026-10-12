@@ -3,7 +3,8 @@
   const $ = (id) => document.getElementById(id);
   const LABEL = { pending_payment: "Awaiting payment", confirmed: "Confirmed", checked_in: "Checked in", completed: "Completed", cancelled: "Cancelled", payment_conflict: "Needs attention" };
   const fmt = (s) => new Date(s + "T00:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-  let tsWidget = null, tsToken = "", siteKey = null;
+  let tsWidget = null, tsToken = "", siteKey = null, nextAfter = null;
+  const wantsBook = new URLSearchParams(location.search).get("next") === "book";
 
   async function api(path, opts = {}) {
     const init = { credentials: "same-origin", ...opts };
@@ -67,7 +68,7 @@
     if (siteKey && !tsToken) return show("loginErr", "Please complete the security check.");
     $("loginBtn").disabled = true;
     try {
-      const d = await api("/api/guest/login", { method: "POST", body: { email: $("email").value.trim(), turnstile_token: tsToken } });
+      const d = await api("/api/guest/login", { method: "POST", body: { email: $("email").value.trim(), turnstile_token: tsToken, next: wantsBook ? "book" : "" } });
       show("loginOk", d.message);
       if (d.preview_link) {
         const a = document.createElement("a"); a.href = d.preview_link; a.textContent = " Preview mode: open the sign-in link.";
@@ -86,14 +87,19 @@
   });
 
   (async function init() {
-    const token = new URLSearchParams(location.hash.slice(1)).get("token");
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const token = hash.get("token");
+    nextAfter = hash.get("next");
     if (token) {
       history.replaceState(null, "", "my-bookings.html"); // drop the one-time token from the address bar
       $("loginForm").hidden = true; $("signingIn").hidden = false;
-      try { await api("/api/guest/session", { method: "POST", body: { token } }); }
+      try {
+        await api("/api/guest/session", { method: "POST", body: { token } });
+        if (nextAfter === "book") { location.replace("book.html"); return; }
+      }
       catch (e) { $("signingIn").hidden = true; $("loginForm").hidden = false; show("loginErr", e.message); }
     }
-    if (await loadList()) return;
+    if (await loadList()) { if (wantsBook) location.replace("book.html"); return; }
     $("signingIn").hidden = true; $("loginForm").hidden = false;
     try { const cfg = await api("/api/config"); siteKey = cfg.turnstile_site_key; renderTurnstile(); } catch (_) {}
   })();

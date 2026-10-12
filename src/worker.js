@@ -25,7 +25,10 @@ const ADMIN_STATUSES = ["confirmed", "checked_in", "completed", "cancelled"];
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (!url.pathname.startsWith("/api/")) {
+      const gate = await pageGate(request, env, url);
+      return gate || env.ASSETS.fetch(request);
+    }
     if (!env.SITE_URL) env.SITE_URL = url.origin;
     try {
       const res = await route(request, env, ctx, url);
@@ -48,6 +51,23 @@ export default {
     ]);
   },
 };
+
+// Pages that need a signed-in guest are redirected on the server, so nothing flashes before the redirect.
+async function pageGate(request, env, url) {
+  const path = url.pathname.replace(/\.html$/, "");
+  if (!["/book", "/my-bookings", "/account"].includes(path) || request.method !== "GET") return null;
+  let guest = null;
+  try { guest = await currentGuest(request, env); } catch (_) { return null; }
+  const go = (loc) => new Response(null, { status: 302, headers: { location: loc, "cache-control": "no-store" } });
+  if (path === "/account") {
+    if (!guest) return null;
+    const next = url.searchParams.get("next") === "book" ? "/book" + (url.searchParams.get("room") ? `?room=${encodeURIComponent(url.searchParams.get("room"))}` : "") : "/my-bookings";
+    return go(next);
+  }
+  if (guest) return null;
+  const room = url.searchParams.get("room");
+  return go(path === "/book" ? `/account?next=book${room ? `&room=${encodeURIComponent(room)}` : ""}` : "/account?next=my-bookings");
+}
 
 // ───────────────────────── routing ─────────────────────────
 

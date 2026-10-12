@@ -22,11 +22,13 @@
     const left = document.createElement("div");
     const room = document.createElement("div"); room.className = "room"; room.textContent = b.room + (b.rooms > 1 ? ` × ${b.rooms}` : "");
     const dates = document.createElement("div"); dates.className = "dates"; dates.textContent = `${fmt(b.check_in)} → ${fmt(b.check_out)} · ${b.nights} night${b.nights > 1 ? "s" : ""}`;
-    const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = b.ref;
+    const meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = b.ref + (["confirmed", "pending_payment"].includes(b.status) ? " · Tap to view, pay or cancel" : " · Tap for details");
     left.append(room, dates, meta);
     const right = document.createElement("div"); right.className = "right";
     const st = document.createElement("span"); st.className = "status s-" + b.status; st.textContent = LABEL[b.status] || b.status;
-    const pay = { paid: ["Payment received", "s-confirmed"], unpaid: ["Not paid", "s-pending_payment"], refunded: ["Refunded", "s-cancelled"] }[b.payment_status] || [b.payment_status, ""];
+    let pay = { paid: ["Payment received", "s-confirmed"], unpaid: ["Not paid", "s-pending_payment"], refunded: ["Refunded", "s-completed"] }[b.payment_status] || [b.payment_status, ""];
+    if (b.payment_status === "paid" && ["cancelled", "payment_conflict"].includes(b.status)) pay = ["Refund pending", "s-pending_payment"];
     const ps = document.createElement("span"); ps.className = "status " + pay[1]; ps.textContent = pay[0];
     const amt = document.createElement("span"); amt.className = "amt"; amt.textContent = "GH₵ " + Number(b.amount_ghs).toLocaleString("en-GH");
     right.append(st, ps, amt);

@@ -35,7 +35,7 @@
       "PAYMENT_MODE": "demo",
       "PAYPAL_ENV": "sandbox",
       "SITE_URL": "",
-      "HOTEL_EMAIL": "",
+      "HOTEL_EMAIL": "stayabankvillage@gmail.com",
       "EMAIL_FROM": "bookings@abankvillage.com",
       "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
     },

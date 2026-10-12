@@ -14,6 +14,9 @@
     if (!d) return;
     spans.forEach((span) => {
       const a = d.rooms.find((x) => x.id === span.dataset.room);
+      // Keep the card price in sync with the price set in the admin dashboard.
+      const price = span.closest(".room-body") && span.closest(".room-body").querySelector(".room-price");
+      if (a && price) price.innerHTML = `GH&#8373; ${Number(a.price_ghs).toLocaleString("en-GH")} <span>/ night</span>`;
       const btn = document.querySelector(`.room-book-btn[data-room="${span.dataset.room}"]`);
       if (!a) { if (btn) btn.classList.add("disabled"); return; }
       if (!a.available) { span.textContent = "Fully booked tonight"; span.className = "room-avail none"; }

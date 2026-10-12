@@ -523,8 +523,8 @@ async function guestCancel(request, env, ctx, url, ref) {
     await logEvent(env, b.id, "system", msg);
     await logEvent(env, b.id, "system", `Refund reference: ${result.ref || "n/a"}`, false);
     ctx.waitUntil(sendStatusEmail(env, b, msg));
-    ctx.waitUntil(notifyHotel(env, `Guest cancelled ${b.ref} (refunded)`,
-      `${b.guest_name} cancelled booking ${b.ref} (${b.check_in} to ${b.check_out}). ${amount} was refunded automatically via ${providerLabel(b.provider)}. The room is available again.`));
+    ctx.waitUntil(notifyHotel(env, `Booking cancelled by guest — ${b.ref}`,
+      `${b.guest_name} cancelled their booking. ${amount} was refunded automatically via ${providerLabel(b.provider)}. The room is available again.`, b));
     return json({ ok: true, refunded: true });
   }
   const msg = `Your booking has been cancelled. We'll refund ${amount} to you shortly — our team has been notified.`;
@@ -532,7 +532,7 @@ async function guestCancel(request, env, ctx, url, ref) {
   await logEvent(env, b.id, "system", `Automatic refund failed: ${result.detail || "unknown error"}`, false);
   ctx.waitUntil(sendStatusEmail(env, b, msg));
   ctx.waitUntil(notifyHotel(env, `ACTION NEEDED: refund ${b.ref} manually`,
-    `${b.guest_name} (${b.phone}, ${b.email}) cancelled booking ${b.ref}, but the automatic refund of ${amount} via ${providerLabel(b.provider)} failed. Please refund them in the ${providerLabel(b.provider)} dashboard, then press "Mark refunded" in the admin dashboard.`));
+    `${b.guest_name} cancelled their booking, but the automatic refund of ${amount} failed. Please refund them in the ${providerLabel(b.provider)} dashboard, then press "Mark refunded" in the staff dashboard.`, b));
   return json({ ok: true, refunded: false });
 }
 
@@ -605,7 +605,7 @@ async function finalizePaid(env, ctx, booking, provider, currency, amountMinor, 
   await logEvent(env, booking.id, "system", "Payment received, but the room was no longer available. Our team will contact you to rebook or refund.");
   const conflicted = await env.DB.prepare("SELECT * FROM bookings WHERE id = ?1").bind(booking.id).first();
   ctx.waitUntil(notifyHotel(env, `ACTION NEEDED: paid booking ${booking.ref} has no room`,
-    `Booking ${booking.ref} was paid after its hold expired and the rooms are now full. Contact ${booking.guest_name} (${booking.phone}, ${booking.email}) to rebook or refund.`));
+    `This booking was paid after its hold expired and the rooms are now full. Contact the guest to move them to another room/date or refund them.`, booking));
   return conflicted;
 }
 
@@ -836,8 +836,29 @@ async function sendEmail(env, to, subject, text, html) {
   }
 }
 
-async function notifyHotel(env, subject, text) {
-  if (env.HOTEL_EMAIL) await sendEmail(env, env.HOTEL_EMAIL, subject, text, `<p>${escapeHtml(text)}</p>`);
+// Email to the hotel. Optional booking `b` adds a details table and a link to the admin dashboard.
+async function notifyHotel(env, subject, text, b) {
+  if (!env.HOTEL_EMAIL) return;
+  let table = "", plain = text;
+  if (b) {
+    const rt = await env.DB.prepare("SELECT name FROM room_types WHERE id = ?1").bind(b.room_type_id).first();
+    const rows = [
+      ["Reference", b.ref], ["Guest", b.guest_name], ["Phone", b.phone], ["Email", b.email],
+      ["Room", `${rt?.name || b.room_type_id}${b.rooms > 1 ? ` × ${b.rooms}` : ""}`],
+      ["Check-in", fmtDate(b.check_in)], ["Check-out", fmtDate(b.check_out)], ["Nights", String(b.nights)],
+      ["Amount", `GH₵ ${Number(b.amount_ghs).toLocaleString()}`], ["Paid via", providerLabel(b.provider)],
+    ];
+    if (b.notes) rows.push(["Guest notes", b.notes]);
+    table = `<table style="border-collapse:collapse;width:100%;font-size:14px;margin-top:12px">${rows.map(([k, v]) =>
+      `<tr><td style="padding:7px 0;color:#7C93A5;border-bottom:1px solid #E4EFF6;width:38%">${k}</td><td style="padding:7px 0;font-weight:600;border-bottom:1px solid #E4EFF6">${escapeHtml(v)}</td></tr>`).join("")}</table>`;
+    plain += "\n\n" + rows.map(([k, v]) => `${k}: ${v}`).join("\n");
+  }
+  const admin = `${(env.SITE_URL || "").replace(/\/$/, "")}/admin.html`;
+  plain += `\n\nOpen the staff dashboard: ${admin}`;
+  const html = `<div style="font-family:Arial,sans-serif;color:#12293C;max-width:560px"><h2 style="color:#17588C;margin:0 0 8px;font-size:18px">${escapeHtml(subject)}</h2>
+<p style="margin:0">${escapeHtml(text)}</p>${table}
+<p style="margin:20px 0"><a href="${escapeHtml(admin)}" style="background:#17588C;color:#fff;padding:10px 22px;border-radius:30px;text-decoration:none;font-weight:600">Open staff dashboard</a></p></div>`;
+  await sendEmail(env, env.HOTEL_EMAIL, subject, plain, html);
 }
 
 async function sendConfirmationEmails(env, b) {
@@ -859,8 +880,8 @@ async function sendConfirmationEmails(env, b) {
 <p style="font-size:13px;color:#34566F">Free cancellation with a full refund until ${escapeHtml(fmtDeadline(b))}. <a href="${escapeHtml(link)}&cancel=1" style="color:#8A1F17">Cancel booking</a></p>
 <p style="font-size:13px;color:#34566F">Questions? Call <a href="tel:0262226592">0262 226 592</a> or <a href="tel:0233344425">0233 344 425</a>.<br>Abank Village Guest House, near KNUST-Emena, Kumasi</p></div>`;
   await sendEmail(env, b.email, `Booking confirmed — ${b.ref}`, text, html);
-  await notifyHotel(env, `New booking ${b.ref}: ${rt?.name || b.room_type_id}, ${b.check_in} → ${b.check_out}`,
-    `${b.guest_name} (${b.phone}, ${b.email}) booked ${b.rooms} × ${rt?.name || b.room_type_id} for ${b.nights} night(s), ${b.check_in} to ${b.check_out}. Paid GH₵ ${b.amount_ghs} via ${providerLabel(b.provider)}.${b.notes ? " Notes: " + b.notes : ""}`);
+  await notifyHotel(env, `New booking — ${b.ref} — ${rt?.name || b.room_type_id}, ${fmtDate(b.check_in)}`,
+    `A new booking has been paid and confirmed.`, b);
 }
 
 async function sendStatusEmail(env, b, message) {

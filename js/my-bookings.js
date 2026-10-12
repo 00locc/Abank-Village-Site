@@ -26,8 +26,10 @@
     left.append(room, dates, meta);
     const right = document.createElement("div"); right.className = "right";
     const st = document.createElement("span"); st.className = "status s-" + b.status; st.textContent = LABEL[b.status] || b.status;
+    const pay = { paid: ["Payment received", "s-confirmed"], unpaid: ["Not paid", "s-pending_payment"], refunded: ["Refunded", "s-cancelled"] }[b.payment_status] || [b.payment_status, ""];
+    const ps = document.createElement("span"); ps.className = "status " + pay[1]; ps.textContent = pay[0];
     const amt = document.createElement("span"); amt.className = "amt"; amt.textContent = "GH₵ " + Number(b.amount_ghs).toLocaleString("en-GH");
-    right.append(st, amt);
+    right.append(st, ps, amt);
     a.append(left, right);
     return a;
   }

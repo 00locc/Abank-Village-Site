@@ -54,6 +54,7 @@
     row(dl, "Check-out", fmtDate(b.check_out) + ", by 11:00 AM");
     row(dl, "Nights", String(b.nights));
     row(dl, "Guest", b.guest_name);
+    row(dl, "Payment", { paid: "Received ✓", unpaid: "Not paid yet", refunded: "Refunded" }[b.payment_status] || b.payment_status);
     row(dl, b.payment_status === "paid" ? "Total paid" : b.payment_status === "refunded" ? "Refunded" : "Total due", "GH₵ " + Number(b.amount_ghs).toLocaleString("en-GH"));
     $("payActions").hidden = !(b.status === "pending_payment" && b.payment_status === "unpaid");
     const ev = $("vEvents"); ev.innerHTML = "";

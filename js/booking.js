@@ -168,24 +168,27 @@
   // If the guest comes back from a cancelled checkout, page shows normal state.
   window.addEventListener("pageshow", (e) => { if (e.persisted) { busy = false; update(); } });
 
-  // Returning guests who are signed in get their details filled in.
+  // Booking requires an account: send guests to sign in first, then fill in their details.
   async function prefillGuest() {
-    try {
-      const me = await api("/api/guest/me", { credentials: "same-origin" });
-      if (!el.name.value) el.name.value = me.name || "";
-      if (!el.phone.value) el.phone.value = me.phone || "";
-      el.email.value = me.email;
-      $("bkGuestText").textContent = `Booking as ${me.name || me.email} (${me.email}).`;
-      $("bkGuest").hidden = false;
-    } catch (_) {
-      $("bkSignInHint").hidden = false;
+    let me;
+    try { me = await api("/api/guest/me", { credentials: "same-origin" }); }
+    catch (_) {
+      const room = new URLSearchParams(location.search).get("room");
+      location.replace("account.html?next=book" + (room ? "&room=" + encodeURIComponent(room) : ""));
+      return false;
     }
+    el.name.value = me.name || "";
+    el.phone.value = me.phone || "";
+    el.email.value = me.email;
+    el.email.readOnly = true;
+    $("bkGuestText").textContent = `Signed in as ${me.name || me.email} (${me.email}).`;
+    $("bkGuest").hidden = false;
+    return true;
   }
   $("bkSignOut").addEventListener("click", async (e) => {
     e.preventDefault();
     try { await fetch("/api/guest/logout", { method: "POST", headers: { "content-type": "application/json" }, body: "{}", credentials: "same-origin" }); } catch (_) {}
-    el.name.value = ""; el.phone.value = ""; el.email.value = "";
-    $("bkGuest").hidden = true; $("bkSignInHint").hidden = false;
+    location.replace("account.html?next=book");
   });
 
   (async function init() {
@@ -206,7 +209,7 @@
     }
     el.inp.min = cfg.today;
     el.inp.max = addDays(cfg.today, 365);
-    prefillGuest();
+    if (!(await prefillGuest())) return;
     el.inp.value = cfg.today;
     el.out.value = addDays(cfg.today, 1);
     el.rooms.innerHTML = Array.from({ length: cfg.max_rooms }, (_, i) => `<option>${i + 1}</option>`).join("");

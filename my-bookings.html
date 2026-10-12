@@ -76,18 +76,9 @@
 </header>
 <main>
   <h1>My bookings</h1>
-  <p class="sub" id="sub">Enter the email you booked with and we'll send you a secure sign-in link. No password needed.</p>
+  <p class="sub" id="sub"></p>
 
-  <form class="card" id="loginForm">
-    <div class="err" id="loginErr" hidden></div>
-    <div class="note" id="loginOk" hidden></div>
-    <label><span>Email</span><input id="email" type="email" maxlength="254" autocomplete="email" required></label>
-    <div class="ts" id="ts"></div>
-    <button type="submit" id="loginBtn">Email me a sign-in link</button>
-    <p class="help" style="margin-top:14px">Have your booking reference? <a href="booking-status.html">Look up a single booking</a>.</p>
-  </form>
-
-  <div class="card" id="signingIn" hidden><p class="help">Signing you in&hellip;</p></div>
+  <div class="card" id="signingIn"><p class="help">Loading your bookings&hellip;</p></div>
 
   <div id="listView" hidden>
     <div class="row"><span class="help" id="who"></span><button class="linkbtn" id="logoutBtn" type="button">Sign out</button></div>
@@ -96,7 +87,6 @@
     <p class="section-h" id="pastH">Past &amp; cancelled</p><div class="bk-list" id="past"></div>
   </div>
 </main>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="js/my-bookings.js" defer></script>
 </body>
 </html>

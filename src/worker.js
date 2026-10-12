@@ -43,7 +43,7 @@ export default {
       env.DB.prepare("UPDATE bookings SET status = 'expired', updated_at = ?1 WHERE status = 'pending_payment' AND hold_expires_at < ?2").bind(now, now - 30 * 60000),
       env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?1").bind(now),
       env.DB.prepare("DELETE FROM guest_sessions WHERE expires_at < ?1").bind(now),
-      env.DB.prepare("DELETE FROM guest_tokens WHERE expires_at < ?1").bind(now),
+      env.DB.prepare("DELETE FROM guest_codes WHERE expires_at < ?1").bind(now),
       env.DB.prepare("DELETE FROM rate_limits WHERE window_start < ?1").bind(now - 24 * 3600000),
     ]);
   },
@@ -332,6 +332,8 @@ async function verifyTurnstile(env, token, ip) {
 async function createBooking(request, env, ctx, url) {
   const ip = clientIp(request);
   await rateLimit(env, "book:" + ip, 10, 3600000);
+  const guest = await currentGuest(request, env);
+  if (!guest) throw new HttpError(401, "Please sign in to book.");
   const body = await readJson(request);
 
   const roomType = cleanText(body.room_type, 40);
@@ -339,7 +341,7 @@ async function createBooking(request, env, ctx, url) {
   const checkOut = cleanText(body.check_out, 10);
   const rooms = Number(body.rooms);
   const name = cleanText(body.name, 100);
-  const email = cleanText(body.email, 254).toLowerCase();
+  const email = guest.email; // always the signed-in account's verified email
   const phone = cleanText(body.phone, 30);
   const notes = cleanText(body.notes, 500);
   const provider = body.provider;
@@ -848,13 +850,14 @@ async function sendStatusEmail(env, b, message) {
     `<div style="font-family:Arial,sans-serif;color:#12293C"><p>Hi ${escapeHtml(b.guest_name)},</p><p>${escapeHtml(message)}</p><p><a href="${escapeHtml(link)}">View your booking</a></p><p style="font-size:13px;color:#34566F">Abank Village Guest House — 0262 226 592</p></div>`);
 }
 
-// ───────────────────────── guest "My bookings" (emailed sign-in link, no passwords) ─────────────────────────
+// ───────────────────────── guest accounts (email + password, email verified by code) ─────────────────────────
 
 const GUEST_COOKIE = "__Host-av_guest";
-const GUEST_LINK_MINUTES = 30;
 const GUEST_SESSION_DAYS = 30;
+const CODE_MINUTES = 15;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-// Creates a My Bookings session for this email and returns the Set-Cookie header value.
+// Creates a signed-in session for this email and returns the Set-Cookie header value.
 async function newGuestSession(env, email) {
   const session = b64url(randomBytes(32));
   await env.DB.prepare("INSERT INTO guest_sessions (token_hash, email, expires_at) VALUES (?1, ?2, ?3)")
@@ -869,48 +872,120 @@ async function currentGuest(request, env) {
     .bind(await sha256Hex(tok), Date.now()).first();
 }
 
+function validGuestPassword(pw) {
+  if (typeof pw !== "string" || pw.length < 8 || pw.length > 200) throw new HttpError(400, "Password must be at least 8 characters.");
+}
+
+// Emails a 6-digit code (purpose: "verify" or "reset"). Returns the code only in preview mode when email can't be sent.
+async function sendGuestCode(env, url, email, name, purpose) {
+  await rateLimit(env, `code:${purpose}:${email}`, 5, 3600000);
+  const code = String(100000 + (new Uint32Array(randomBytes(4).buffer)[0] % 900000));
+  await env.DB.prepare(
+    `INSERT INTO guest_codes (email, purpose, code_hash, expires_at, attempts) VALUES (?1, ?2, ?3, ?4, 0)
+     ON CONFLICT(email, purpose) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at, attempts = 0`
+  ).bind(email, purpose, await sha256Hex(code), Date.now() + CODE_MINUTES * 60000).run();
+  const what = purpose === "verify" ? "confirm your email" : "reset your password";
+  const sent = await sendEmail(env, email, `${code} is your Abank Village code`,
+    `Hi ${name || ""},\n\nUse this code to ${what}: ${code}\n\nIt expires in ${CODE_MINUTES} minutes. If you didn't request it, you can ignore this email.\n\nAbank Village Guest House`,
+    `<div style="font-family:Arial,sans-serif;color:#12293C;max-width:520px"><p>Hi ${escapeHtml(name || "")},</p><p>Use this code to ${what}:</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#17588C;margin:18px 0">${code}</p>
+<p style="font-size:13px;color:#34566F">It expires in ${CODE_MINUTES} minutes. If you didn't request it, ignore this email.<br>Abank Village Guest House</p></div>`);
+  return !sent && isDemo(env, url) ? code : null;
+}
+
+async function checkGuestCode(env, email, purpose, code) {
+  const row = await env.DB.prepare("SELECT * FROM guest_codes WHERE email = ?1 AND purpose = ?2").bind(email, purpose).first();
+  if (!row || row.expires_at < Date.now()) throw new HttpError(400, "That code has expired. Request a new one.");
+  if (row.attempts >= 5) throw new HttpError(429, "Too many wrong codes. Request a new one.");
+  if (!/^\d{6}$/.test(String(code || "")) || !safeEqual(await sha256Hex(String(code)), row.code_hash)) {
+    await env.DB.prepare("UPDATE guest_codes SET attempts = attempts + 1 WHERE email = ?1 AND purpose = ?2").bind(email, purpose).run();
+    throw new HttpError(400, "That code isn't right. Check the email and try again.");
+  }
+  await env.DB.prepare("DELETE FROM guest_codes WHERE email = ?1 AND purpose = ?2").bind(email, purpose).run();
+}
+
 async function guestRoute(request, env, ctx, url) {
   const p = url.pathname.slice("/api/guest".length);
   const m = request.method;
   checkOrigin(request, url);
+  const ip = clientIp(request);
+  const body = m === "POST" ? await readJson(request) : {};
+  const email = cleanText(body.email, 254).toLowerCase();
 
-  // Step 1: guest asks for a sign-in link. Same answer whether or not the email has bookings.
-  if (p === "/login" && m === "POST") {
-    const ip = clientIp(request);
-    await rateLimit(env, "guest-login-ip:" + ip, 10, 3600000);
-    const body = await readJson(request);
-    const email = cleanText(body.email, 254).toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new HttpError(400, "Please enter a valid email address.");
-    await rateLimit(env, "guest-login-email:" + email, 5, 3600000);
+  if (p === "/signup" && m === "POST") {
+    await rateLimit(env, "signup:" + ip, 10, 3600000);
+    const name = cleanText(body.name, 100), phone = cleanText(body.phone, 30);
+    if (name.length < 2) throw new HttpError(400, "Please enter your full name.");
+    if (!EMAIL_RE.test(email)) throw new HttpError(400, "Please enter a valid email address.");
+    if (!/^\+?[0-9 ()-]{9,20}$/.test(phone)) throw new HttpError(400, "Please enter a valid phone number.");
+    validGuestPassword(body.password);
     await verifyTurnstile(env, body.turnstile_token, ip);
-    const has = await env.DB.prepare("SELECT 1 FROM bookings WHERE email = ?1 AND status != 'expired' LIMIT 1").bind(email).first();
-    const reply = { ok: true, message: "If that email has bookings with us, a sign-in link is on its way. It works for 30 minutes." };
-    if (!has) return json(reply);
-    const token = b64url(randomBytes(32));
-    await env.DB.prepare("INSERT INTO guest_tokens (token_hash, email, expires_at) VALUES (?1, ?2, ?3)")
-      .bind(await sha256Hex(token), email, Date.now() + GUEST_LINK_MINUTES * 60000).run();
-    const link = `${siteUrl(env, url)}/my-bookings.html#token=${token}${body.next === "book" ? "&next=book" : ""}`;
-    const sent = await sendEmail(env, email, "Your Abank Village sign-in link",
-      `Use this link to see your bookings at Abank Village Guest House:\n\n${link}\n\nIt works once and expires in ${GUEST_LINK_MINUTES} minutes. If you didn't ask for it, you can ignore this email.`,
-      `<div style="font-family:Arial,sans-serif;color:#12293C;max-width:520px"><h2 style="color:#17588C">Sign in to see your bookings</h2>
-<p>Tap the button below to see your bookings at Abank Village Guest House.</p>
-<p style="margin:22px 0"><a href="${escapeHtml(link)}" style="background:#17588C;color:#fff;padding:12px 26px;border-radius:30px;text-decoration:none;font-weight:600">View my bookings</a></p>
-<p style="font-size:13px;color:#34566F">The link works once and expires in ${GUEST_LINK_MINUTES} minutes. If you didn't ask for it, ignore this email.</p></div>`);
-    // Preview only: show the link on screen when email isn't set up, so the flow can be tested.
-    if (!sent && isDemo(env, url)) reply.preview_link = link;
-    return json(reply);
+    const existing = await env.DB.prepare("SELECT verified FROM guests WHERE email = ?1").bind(email).first();
+    if (existing && existing.verified) throw new HttpError(409, "An account with this email already exists. Sign in instead.");
+    const salt = hex(randomBytes(16));
+    const hash = await pbkdf2(body.password, salt, PBKDF2_ITERATIONS);
+    await env.DB.prepare(
+      `INSERT INTO guests (email, name, phone, pass_hash, salt, iterations, verified, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)
+       ON CONFLICT(email) DO UPDATE SET name = excluded.name, phone = excluded.phone, pass_hash = excluded.pass_hash, salt = excluded.salt, iterations = excluded.iterations`
+    ).bind(email, name, phone, hash, salt, PBKDF2_ITERATIONS, Date.now()).run();
+    const preview = await sendGuestCode(env, url, email, name, "verify");
+    return json({ ok: true, needs_verification: true, ...(preview ? { preview_code: preview } : {}) });
   }
 
-  // Step 2: the link from the email is exchanged (once) for a session cookie.
-  if (p === "/session" && m === "POST") {
-    await rateLimit(env, "guest-session:" + clientIp(request), 30, 3600000);
-    const body = await readJson(request);
-    const token = String(body.token || "");
-    if (token.length < 20 || token.length > 100) throw new HttpError(400, "This sign-in link is invalid.");
-    const row = await env.DB.prepare("DELETE FROM guest_tokens WHERE token_hash = ?1 AND expires_at > ?2 RETURNING email")
-      .bind(await sha256Hex(token), Date.now()).first();
-    if (!row) throw new HttpError(400, "This sign-in link has expired or was already used. Request a new one.");
-    return json({ ok: true, email: row.email }, 200, { "set-cookie": await newGuestSession(env, row.email) });
+  if (p === "/verify" && m === "POST") {
+    await rateLimit(env, "verify:" + ip, 30, 3600000);
+    const g = await env.DB.prepare("SELECT * FROM guests WHERE email = ?1").bind(email).first();
+    if (!g) throw new HttpError(400, "That code has expired. Request a new one.");
+    await checkGuestCode(env, email, "verify", body.code);
+    await env.DB.prepare("UPDATE guests SET verified = 1 WHERE email = ?1").bind(email).run();
+    return json({ ok: true }, 200, { "set-cookie": await newGuestSession(env, email) });
+  }
+
+  if (p === "/resend-code" && m === "POST") {
+    await rateLimit(env, "resend:" + ip, 10, 3600000);
+    const g = await env.DB.prepare("SELECT name, verified FROM guests WHERE email = ?1").bind(email).first();
+    let preview = null;
+    if (g && !g.verified) preview = await sendGuestCode(env, url, email, g.name, "verify");
+    return json({ ok: true, ...(preview ? { preview_code: preview } : {}) });
+  }
+
+  if (p === "/signin" && m === "POST") {
+    await rateLimit(env, "signin-ip:" + ip, 20, 15 * 60000);
+    await rateLimit(env, "signin-user:" + email, 8, 15 * 60000);
+    const g = await env.DB.prepare("SELECT * FROM guests WHERE email = ?1").bind(email).first();
+    const pw = typeof body.password === "string" ? body.password.slice(0, 200) : "";
+    const hash = await pbkdf2(pw, g ? g.salt : "00".repeat(16), g ? g.iterations : PBKDF2_ITERATIONS);
+    if (!g || !safeEqual(hash, g.pass_hash)) throw new HttpError(401, "Incorrect email or password.");
+    if (!g.verified) {
+      const preview = await sendGuestCode(env, url, email, g.name, "verify");
+      return json({ ok: true, needs_verification: true, ...(preview ? { preview_code: preview } : {}) });
+    }
+    return json({ ok: true }, 200, { "set-cookie": await newGuestSession(env, email) });
+  }
+
+  if (p === "/forgot" && m === "POST") {
+    await rateLimit(env, "forgot:" + ip, 10, 3600000);
+    if (!EMAIL_RE.test(email)) throw new HttpError(400, "Please enter a valid email address.");
+    await verifyTurnstile(env, body.turnstile_token, ip);
+    const g = await env.DB.prepare("SELECT name, verified FROM guests WHERE email = ?1").bind(email).first();
+    let preview = null;
+    if (g && g.verified) preview = await sendGuestCode(env, url, email, g.name, "reset");
+    // Same answer either way so the form can't be used to discover who has an account.
+    return json({ ok: true, message: "If that email has an account, we've sent a 6-digit code to it.", ...(preview ? { preview_code: preview } : {}) });
+  }
+
+  if (p === "/reset" && m === "POST") {
+    await rateLimit(env, "reset:" + ip, 20, 3600000);
+    validGuestPassword(body.password);
+    const g = await env.DB.prepare("SELECT 1 FROM guests WHERE email = ?1 AND verified = 1").bind(email).first();
+    if (!g) throw new HttpError(400, "That code has expired. Request a new one.");
+    await checkGuestCode(env, email, "reset", body.code);
+    const salt = hex(randomBytes(16));
+    await env.DB.batch([
+      env.DB.prepare("UPDATE guests SET pass_hash = ?1, salt = ?2, iterations = ?3 WHERE email = ?4").bind(await pbkdf2(body.password, salt, PBKDF2_ITERATIONS), salt, PBKDF2_ITERATIONS, email),
+      env.DB.prepare("DELETE FROM guest_sessions WHERE email = ?1").bind(email), // sign out everywhere else
+    ]);
+    return json({ ok: true }, 200, { "set-cookie": await newGuestSession(env, email) });
   }
 
   if (p === "/logout" && m === "POST") {
@@ -919,17 +994,17 @@ async function guestRoute(request, env, ctx, url) {
     return json({ ok: true }, 200, { "set-cookie": `${GUEST_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
   }
 
-  // Details from the guest's latest booking, used to pre-fill the booking form.
+  const guest = await currentGuest(request, env);
+  if (!guest) throw new HttpError(401, "Please sign in.");
+
   if (p === "/me" && m === "GET") {
-    const guest = await currentGuest(request, env);
-    if (!guest) throw new HttpError(401, "Please sign in.");
-    const last = await env.DB.prepare("SELECT guest_name, phone FROM bookings WHERE email = ?1 ORDER BY id DESC LIMIT 1").bind(guest.email).first();
-    return json({ email: guest.email, name: last ? last.guest_name : "", phone: last ? last.phone : "" });
+    const g = await env.DB.prepare("SELECT name, phone FROM guests WHERE email = ?1").bind(guest.email).first();
+    const last = g ? null : await env.DB.prepare("SELECT guest_name AS name, phone FROM bookings WHERE email = ?1 ORDER BY id DESC LIMIT 1").bind(guest.email).first();
+    const src = g || last || {};
+    return json({ email: guest.email, name: src.name || "", phone: src.phone || "" });
   }
 
   if (p === "/bookings" && m === "GET") {
-    const guest = await currentGuest(request, env);
-    if (!guest) throw new HttpError(401, "Please sign in.");
     const rows = await env.DB.prepare(
       `SELECT b.ref, b.check_in, b.check_out, b.nights, b.rooms, b.amount_ghs, b.status, b.payment_status, rt.name AS room
        FROM bookings b JOIN room_types rt ON rt.id = b.room_type_id

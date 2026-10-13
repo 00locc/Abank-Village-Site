@@ -150,6 +150,16 @@
     if (!["cancelled", "completed", "expired"].includes(b.status)) act(b.payment_status === "paid" ? "Cancel (no refund)" : "Cancel booking", { status: "cancelled" }, b.payment_status === "paid" ? "ghost" : "danger", b.payment_status === "paid" ? "Cancel WITHOUT refunding the guest? The room will become available again." : "Cancel this booking? The room will become available again.");
     if (b.payment_status === "paid" && !["completed"].includes(b.status)) act("Cancel & refund", { action: "cancel_refund" }, "danger", "Cancel this booking and refund the guest in full automatically?");
     if (b.payment_status === "paid") act("Mark refunded", { payment_status: "refunded" }, "ghost", "Only use this if you already refunded the guest yourself in Paystack or PayPal. Continue?");
+    if (["cancelled", "expired", "pending_payment"].includes(b.status) && b.payment_status !== "paid") {
+      const del = document.createElement("button"); del.textContent = "Delete booking"; del.className = "danger";
+      del.onclick = async () => {
+        if (!window.confirm(`Permanently delete ${b.ref}? This can't be undone.`)) return;
+        del.disabled = true; err.hidden = true;
+        try { await api(`/bookings/${b.id}`, { method: "DELETE" }); closeDrawer(); loadBookings(); }
+        catch (e) { err.textContent = e.message; err.hidden = false; del.disabled = false; }
+      };
+      actions.appendChild(del);
+    }
     if (actions.children.length) { body.append(note, notifyLab, actions); }
     if (b.status === "payment_conflict") {
       const w = document.createElement("div"); w.className = "err";

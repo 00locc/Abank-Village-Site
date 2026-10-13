@@ -1190,7 +1190,7 @@ async function adminRoute(request, env, ctx, url) {
     const where = [], args = [];
     if (status === "active") where.push("b.status IN ('confirmed','checked_in','payment_conflict')");
     else if (status) { where.push(`b.status = ?${args.length + 1}`); args.push(status); }
-    else where.push("NOT (b.status = 'pending_payment' AND b.hold_expires_at < " + (Date.now() - 3600000) + ") AND b.status != 'expired'");
+    else where.push("NOT (b.status = 'pending_payment' AND b.hold_expires_at < " + (Date.now() - 3600000) + ") AND b.status NOT IN ('expired', 'cancelled')");
     if (q) { where.push(`(b.ref LIKE ?${args.length + 1} OR b.guest_name LIKE ?${args.length + 1} OR b.email LIKE ?${args.length + 1} OR b.phone LIKE ?${args.length + 1})`); args.push(`%${q}%`); }
     if (parseDate(from)) { where.push(`b.check_out > ?${args.length + 1}`); args.push(from); }
     const rows = await env.DB.prepare(
@@ -1257,6 +1257,24 @@ async function adminRoute(request, env, ctx, url) {
     const msg = labels[status] + (note ? " " + note : "");
     await logEvent(env, id, actor, msg);
     if (notify && status !== "checked_in" && status !== "completed") ctx.waitUntil(sendStatusEmail(env, b, msg));
+    return json({ ok: true });
+  }
+
+  // Permanently delete a booking — only when no money is owed back to the guest.
+  mm = p.match(/^\/bookings\/(\d+)$/);
+  if (mm && m === "DELETE") {
+    const id = Number(mm[1]);
+    const b = await env.DB.prepare("SELECT status, payment_status, ref FROM bookings WHERE id = ?1").bind(id).first();
+    if (!b) throw new HttpError(404, "Not found");
+    const deletable = ["cancelled", "expired", "pending_payment"].includes(b.status) && b.payment_status !== "paid";
+    if (!deletable) throw new HttpError(400, b.payment_status === "paid"
+      ? "This guest has paid. Refund them (Cancel & refund) before deleting."
+      : "Only cancelled, expired or unpaid bookings can be deleted. Cancel it first.");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM booking_events WHERE booking_id = ?1").bind(id),
+      env.DB.prepare("DELETE FROM bookings WHERE id = ?1").bind(id),
+    ]);
+    console.log(`Booking ${b.ref} deleted by ${actor}`);
     return json({ ok: true });
   }
 

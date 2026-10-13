@@ -788,7 +788,7 @@ async function demoPay(request, env, ctx, url) {
     const usd = b.provider === "paypal" ? ` (≈ US$${(await usdCents(env, b.amount_ghs) / 100).toFixed(2)})` : "";
     const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Demo checkout</title><meta name="robots" content="noindex">
-<style>body{font-family:system-ui,sans-serif;background:#F5FAFD;color:#12293C;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
+<style>*{box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#F5FAFD;color:#12293C;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
 .c{background:#fff;border:1px solid #CFE0EC;border-radius:18px;padding:28px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(14,36,54,.1)}
 .tag{display:inline-block;background:#FFF4D6;color:#7A5A00;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.05em}
 h1{font-size:20px;margin:14px 0 6px}p{color:#34566F;font-size:14px;line-height:1.6}.amt{font-size:28px;font-weight:700;color:#17588C;margin:10px 0 18px}

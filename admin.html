@@ -42,7 +42,7 @@
   header { background:var(--dark); color:var(--white); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; position:sticky; top:0; z-index:5; }
   header .brand { font-family:'Josefin Sans',sans-serif; font-weight:700; letter-spacing:.05em; }
   header .who { font-size:.8rem; opacity:.8; display:flex; align-items:center; gap:12px; }
-  header button { padding:6px 14px; font-size:.72rem; }
+  header button { padding:6px 14px; font-size:.72rem; white-space:nowrap; }
   nav.tabs { display:flex; gap:4px; padding:12px 20px 0; border-bottom:1px solid var(--off3); background:var(--white); overflow-x:auto; }
   nav.tabs button { background:none; color:var(--text2); border-radius:10px 10px 0 0; padding:10px 16px; border-bottom:2px solid transparent; white-space:nowrap; }
   nav.tabs button.active { color:var(--blue); border-bottom-color:var(--blue); }
@@ -79,7 +79,27 @@
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
   .rooms-table input { width:90px; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
-  @media (max-width:760px) { .two, .grid2 { grid-template-columns:1fr; } main { padding:14px; } }
+  @media (max-width:760px) {
+    .two, .grid2 { grid-template-columns:1fr; } main { padding:14px; }
+    header { padding:10px 14px; } header .who span { display:none; }
+    .stats { grid-template-columns:1fr 1fr; }
+    .toolbar { display:grid; grid-template-columns:1fr 1fr; }
+    .toolbar label { min-width:0; width:auto; }
+    .toolbar label[style] { grid-column:1/-1; }
+    .toolbar button { grid-column:1/-1; }
+    /* Bookings list as cards on phones */
+    #bookingRows ~ thead, .table-wrap:has(#bookingRows) thead { display:none; }
+    .table-wrap:has(#bookingRows) { background:none; border:0; overflow:visible; }
+    .table-wrap:has(#bookingRows) table, .table-wrap:has(#bookingRows) tbody { display:block; }
+    #bookingRows tr { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; background:var(--white); border:1px solid var(--off3); border-radius:14px; padding:14px; margin-bottom:10px; }
+    #bookingRows td { border:0; padding:0; white-space:normal; font-size:.86rem; }
+    #bookingRows td::before { content:attr(data-label); display:block; font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+    #bookingRows td:nth-child(1) { grid-column:1/-1; font-weight:700; color:var(--blue); font-size:1rem; }
+    #bookingRows td:nth-child(1)::before, #bookingRows td.empty::before { display:none; }
+    #bookingRows td.empty { grid-column:1/-1; }
+    /* Rooms table: let it scroll sideways with clear room names */
+    .rooms-table input { width:72px; }
+  }
 </style>
 </head>
 <body>

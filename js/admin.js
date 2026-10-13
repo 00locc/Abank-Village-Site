@@ -85,6 +85,7 @@
         const tr = document.createElement("tr");
         tr.append(td(b.ref), td(b.guest_name), td(b.phone), td(b.room_name + (b.rooms > 1 ? " × " + b.rooms : "")),
           td(fmtDate(b.check_in)), td(fmtDate(b.check_out)), td(cedi(b.amount_ghs)), td(pill(b.payment_status)), td(pill(b.status)));
+        ["Ref", "Guest", "Phone", "Room", "Check-in", "Check-out", "Total", "Payment", "Status"].forEach((l, i) => { if (tr.children[i]) tr.children[i].dataset.label = l; });
         tr.onclick = () => openBooking(b.id);
         tbody.appendChild(tr);
       });

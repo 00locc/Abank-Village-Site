@@ -116,7 +116,7 @@
   .pshow-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.4); cursor: pointer; transition: background 0.25s, width 0.25s; }
   .pshow-dot.active { background: var(--orange); width: 20px; border-radius: 4px; }
   #rooms { background: var(--orange-faint); padding: 100px 48px; }
-  .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 22px; margin-top: 48px; }
+  .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(310px, 100%), 1fr)); gap: 22px; margin-top: 48px; }
   .room-card { background: var(--white); border-radius: 20px; overflow: hidden; border: 1px solid var(--offwhite3); transition: all 0.35s ease; }
   .room-card:hover { border-color: var(--orange2); transform: translateY(-5px); box-shadow: 0 16px 48px rgba(23,88,140,0.12); }
   .room-slideshow { position: relative; height: 200px; overflow: hidden; }
@@ -142,7 +142,7 @@
   .tab-btn:hover { color: var(--orange); }
   .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
   .tab-content { display: none; }
-  .tab-content.active { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+  .tab-content.active { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 18px; }
   .utility-card { background: var(--orange-faint); border-radius: 16px; padding: 24px 20px; border: 1px solid var(--offwhite3); display: flex; flex-direction: column; gap: 10px; transition: all 0.3s; }
   .utility-card:hover { border-color: var(--orange2); box-shadow: 0 6px 22px rgba(23,88,140,0.1); }
   .utility-icon { font-size: 1.7rem; width: 48px; height: 48px; background: var(--orange-pale); border-radius: 13px; display: flex; align-items: center; justify-content: center; }
@@ -153,7 +153,7 @@
   #facilities .section-title em { color: var(--orange2); }
   #facilities .section-label { color: var(--orange2); }
   #facilities .divider-line { background: var(--orange2); }
-  .facilities-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; margin-top: 48px; }
+  .facilities-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 22px; margin-top: 48px; }
   .facility-card { background: var(--dark2); border-radius: 20px; padding: 34px 28px; border: 1px solid rgba(23,88,140,0.15); transition: all 0.3s; position: relative; overflow: hidden; }
   .facility-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(to right, var(--orange), var(--orange2)); opacity: 0; transition: opacity 0.3s; }
   .facility-card:hover { border-color: rgba(23,88,140,0.4); box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
@@ -226,9 +226,24 @@
   @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
   .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s ease, transform 0.7s ease; }
   .reveal.visible { opacity: 1; transform: translateY(0); }
+  .nav-mobile { display: none; align-items: center; gap: 12px; }
+  .nav-mobile .nav-cta { text-decoration: none; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 9px 16px; }
+  .nav-toggle { width: 42px; height: 42px; border: 1px solid var(--offwhite3); background: var(--white); border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; cursor: pointer; }
+  .nav-toggle span { width: 18px; height: 2px; background: var(--dark); border-radius: 2px; transition: transform 0.25s, opacity 0.25s; }
+  nav.open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  nav.open .nav-toggle span:nth-child(2) { opacity: 0; }
+  nav.open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
   @media (max-width: 1000px) {
-    nav { padding: 14px 20px; }
+    nav { padding: 12px 16px; }
+    .nav-mobile { display: flex; }
     .nav-links { display: none; }
+    nav.open .nav-links { display: flex; flex-direction: column; gap: 0; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--offwhite3); box-shadow: 0 14px 30px rgba(14,36,54,0.12); padding: 6px 16px 14px; }
+    nav.open .nav-links li { border-bottom: 1px solid var(--offwhite2); }
+    nav.open .nav-links li:last-child { display: none; }
+    nav.open .nav-links a { display: block; padding: 15px 4px; font-size: 0.86rem; }
+    nav.open .nav-links li[hidden] { display: none; }
+    .nav-logo img { width: 42px; height: 42px; }
+    .nav-logo { font-size: 1rem; }
     section, #rooms, #utilities, #facilities, #location, #contact { padding: 70px 22px; }
     #about { grid-template-columns: 1fr; gap: 36px; }
     .about-img-stack { height: 300px; }
@@ -236,6 +251,7 @@
     .location-wrapper { grid-template-columns: 1fr; }
     footer { flex-direction: column; gap: 10px; text-align: center; }
   }
+  @media (max-width: 420px) { .nav-logo span { display: none; } }
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280"><rect width="400" height="280" fill="#17588C"/><text x="200" y="150" font-family="sans-serif" font-size="42" font-weight="700" fill="#FCFDFE" text-anchor="middle">AV</text></svg></template>
 </head>
@@ -252,6 +268,10 @@
     <li id="navAccountItem" hidden><a href="my-bookings.html">My Bookings</a></li>
     <li><a href="book.html" class="nav-cta">Book Now</a></li>
   </ul>
+  <div class="nav-mobile">
+    <a href="book.html" class="nav-cta">Book Now</a>
+    <button type="button" class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
 </nav>
 
 <section class="hero" id="home">
@@ -658,6 +678,14 @@
     });
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+<script>
+(function () {
+  var nav = document.querySelector("nav"), btn = document.getElementById("navToggle");
+  if (!btn) return;
+  btn.addEventListener("click", function () { var o = nav.classList.toggle("open"); btn.setAttribute("aria-expanded", o); });
+  nav.querySelectorAll(".nav-links a").forEach(function (a) { a.addEventListener("click", function () { nav.classList.remove("open"); btn.setAttribute("aria-expanded", "false"); }); });
+})();
 </script>
 <script src="js/room-availability.js" defer></script>
 </body>

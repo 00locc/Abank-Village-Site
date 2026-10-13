@@ -27,7 +27,7 @@
     "HOTEL_EMAIL": "stayabankvillage@gmail.com",
     "EMAIL_FROM": "bookings@abankvillage.com",
     // Real Turnstile site key goes here before launch (secret goes in TURNSTILE_SECRET_KEY).
-    "TURNSTILE_SITE_KEY": ""
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFVxHouG--uuPjtQ"
   },
   // Preview builds (non-main branches): separate database, simulated payments, test bot-check key.
   "previews": {

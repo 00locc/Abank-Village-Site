@@ -40,7 +40,8 @@
   .link { background:none; color:var(--blue); padding:0; font-size:.82rem; letter-spacing:0; margin-top:12px; }
   .link:hover { background:none; text-decoration:underline; }
   header { background:var(--dark); color:var(--white); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; position:sticky; top:0; z-index:5; }
-  header .brand { font-family:'Josefin Sans',sans-serif; font-weight:700; letter-spacing:.05em; }
+  header .brand { font-family:'Josefin Sans',sans-serif; font-weight:700; letter-spacing:.05em; color:var(--white); text-decoration:none; }
+  header .brand:hover { color:var(--blue3); }
   header .who { font-size:.8rem; opacity:.8; display:flex; align-items:center; gap:12px; }
   header button { padding:6px 14px; font-size:.72rem; white-space:nowrap; }
   nav.tabs { display:flex; gap:4px; padding:12px 20px 0; border-bottom:1px solid var(--off3); background:var(--white); overflow-x:auto; }
@@ -113,6 +114,7 @@
     <label><span>Password</span><input id="loginPass" type="password" autocomplete="current-password" required></label>
     <button class="full" type="submit">Log in</button>
     <button type="button" class="link" id="showSetup">First time? Create the admin account</button>
+    <a href="/" class="link" style="display:block;text-decoration:none;margin-top:6px">&larr; Back to website</a>
   </form>
   <form class="card login" id="setupForm" hidden>
     <h1>Create admin account</h1>
@@ -127,7 +129,7 @@
 
 <div id="appView" hidden>
   <header>
-    <div class="brand">Abank Village &middot; Bookings</div>
+    <a class="brand" href="/" title="Back to the website">Abank Village &middot; Bookings</a>
     <div class="who"><span id="whoEmail"></span><button class="ghost" id="logoutBtn">Log out</button></div>
   </header>
   <nav class="tabs">

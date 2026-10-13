@@ -344,7 +344,11 @@ async function verifyTurnstile(env, token, ip) {
   if (ip !== "local") body.append("remoteip", ip);
   const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body });
   const data = await r.json();
-  if (!data.success) throw new HttpError(400, "Security check failed. Please refresh the page and try again.");
+  if (!data.success) {
+    const codes = (data["error-codes"] || []).join(", ");
+    console.error("Turnstile failed", codes, data.hostname || "");
+    throw new HttpError(400, `Security check failed. Please refresh the page and try again.${codes ? ` (code: ${codes})` : ""}`);
+  }
 }
 
 // ───────────────────────── bookings ─────────────────────────

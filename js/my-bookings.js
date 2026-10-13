@@ -62,6 +62,7 @@
   });
 
   (async function init() {
-    if (!(await loadList())) location.replace("account.html?next=my-bookings");
+    if (!(await loadList())) { location.replace("account.html?next=my-bookings"); return; }
+    try { const me = await api("/api/guest/me"); if (me.is_staff) $("staffLink").hidden = false; } catch (_) {}
   })();
 })();

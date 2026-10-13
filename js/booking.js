@@ -187,6 +187,10 @@
     el.email.value = me.email;
     el.email.readOnly = true;
     $("bkGuestText").textContent = `Signed in as ${me.name || me.email} (${me.email}).`;
+    if (me.is_staff && !document.getElementById("bkStaffLink")) {
+      const a = document.createElement("a"); a.id = "bkStaffLink"; a.href = "admin.html"; a.textContent = "Staff Dashboard";
+      $("bkGuest").append(" · ", a);
+    }
     $("bkGuest").hidden = false;
     return true;
   }

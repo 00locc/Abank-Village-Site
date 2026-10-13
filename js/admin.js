@@ -65,6 +65,7 @@
     document.querySelectorAll("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== b.dataset.tab));
     if (b.dataset.tab === "rooms") loadRooms();
     if (b.dataset.tab === "bookings") loadBookings();
+    if (b.dataset.tab === "account") loadStaff();
   }));
 
   // ── bookings ──
@@ -242,10 +243,36 @@
     try { await api("/password", { method: "POST", body: { current: $("pwCur").value, new: $("pwNew").value } }); alert("Password changed. Please log in again."); showLogin(); }
     catch (err) { msg("pwErr", err.message); }
   });
+  async function loadStaff() {
+    const ul = $("staffList"); ul.innerHTML = "";
+    try {
+      const { staff } = await api("/admins");
+      staff.forEach((st) => {
+        const li = document.createElement("li"); li.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:10px";
+        const info = document.createElement("span");
+        info.textContent = st.email + (st.you ? " (you)" : "");
+        const sm = document.createElement("small"); sm.textContent = st.has_account ? "Website account ✓" : "Needs to create a website account with this email";
+        info.appendChild(sm);
+        li.appendChild(info);
+        if (!st.you) {
+          const rm = document.createElement("button"); rm.type = "button"; rm.className = "ghost"; rm.textContent = "Remove";
+          rm.onclick = async () => {
+            if (!window.confirm(`Remove staff access for ${st.email}?`)) return;
+            try { await api(`/admins/${st.id}`, { method: "DELETE" }); loadStaff(); } catch (err) { msg("staffErr", err.message); }
+          };
+          li.appendChild(rm);
+        }
+        ul.appendChild(li);
+      });
+    } catch (err) { msg("staffErr", err.message); }
+  }
   $("staffForm").addEventListener("submit", async (e) => {
     e.preventDefault(); msg("staffErr"); msg("staffOk");
-    try { await api("/admins", { method: "POST", body: { email: $("sEmail").value, password: $("sPass").value } }); msg("staffOk", "Staff login created."); $("sEmail").value = ""; $("sPass").value = ""; }
-    catch (err) { msg("staffErr", err.message); }
+    try {
+      await api("/admins", { method: "POST", body: { email: $("sEmail").value } });
+      msg("staffOk", `Access given. They sign in on the website with ${$("sEmail").value} (creating an account first if they don't have one).`);
+      $("sEmail").value = ""; loadStaff();
+    } catch (err) { msg("staffErr", err.message); }
   });
 
   start();

@@ -2,7 +2,8 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
-  const next = params.get("next") === "book" ? "book.html" + (params.get("room") ? "?room=" + encodeURIComponent(params.get("room")) : "") : "my-bookings.html";
+  const next = params.get("next") === "book" ? "book.html" + (params.get("room") ? "?room=" + encodeURIComponent(params.get("room")) : "")
+    : params.get("next") === "admin" ? "admin.html" : "my-bookings.html";
   let email = "", siteKey = null;
   const widgets = {}, tokens = {};
 

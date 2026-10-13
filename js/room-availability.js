@@ -2,7 +2,12 @@
 (function () {
   const item = document.getElementById("navAccountItem");
   if (!item) return;
-  fetch("/api/guest/me", { credentials: "same-origin" }).then((r) => { if (r.ok) item.hidden = false; }).catch(() => {});
+  fetch("/api/guest/me", { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null)).then((me) => {
+    if (!me) return;
+    item.hidden = false;
+    const staff = document.getElementById("navStaffItem");
+    if (staff && me.is_staff) staff.hidden = false;
+  }).catch(() => {});
 })();
 
 // Shows tonight's availability on the home page room cards.

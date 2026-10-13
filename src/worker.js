@@ -61,7 +61,8 @@ async function pageGate(request, env, url) {
   const go = (loc) => new Response(null, { status: 302, headers: { location: loc, "cache-control": "no-store" } });
   if (path === "/account") {
     if (!guest) return null;
-    const next = url.searchParams.get("next") === "book" ? "/book" + (url.searchParams.get("room") ? `?room=${encodeURIComponent(url.searchParams.get("room"))}` : "") : "/my-bookings";
+    const nx = url.searchParams.get("next");
+    const next = nx === "book" ? "/book" + (url.searchParams.get("room") ? `?room=${encodeURIComponent(url.searchParams.get("room"))}` : "") : nx === "admin" ? "/admin" : "/my-bookings";
     return go(next);
   }
   if (guest) return null;
@@ -1049,7 +1050,8 @@ async function guestRoute(request, env, ctx, url) {
     const g = await env.DB.prepare("SELECT name, phone FROM guests WHERE email = ?1").bind(guest.email).first();
     const last = g ? null : await env.DB.prepare("SELECT guest_name AS name, phone FROM bookings WHERE email = ?1 ORDER BY id DESC LIMIT 1").bind(guest.email).first();
     const src = g || last || {};
-    return json({ email: guest.email, name: src.name || "", phone: src.phone || "" });
+    const staff = g ? await env.DB.prepare("SELECT 1 FROM admins WHERE email = ?1").bind(guest.email).first() : null;
+    return json({ email: guest.email, name: src.name || "", phone: src.phone || "", is_staff: !!staff });
   }
 
   if (p === "/bookings" && m === "GET") {
@@ -1086,12 +1088,20 @@ function sessionCookie(value, maxAge) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
 }
 
+// Staff access: either a staff-login session, or a signed-in website account whose email is on the approved staff list.
 async function currentAdmin(request, env) {
   const tok = getCookie(request, SESSION_COOKIE);
-  if (!tok || tok.length > 100) return null;
+  if (tok && tok.length <= 100) {
+    const a = await env.DB.prepare(
+      "SELECT a.id, a.email FROM sessions s JOIN admins a ON a.id = s.admin_id WHERE s.token_hash = ?1 AND s.expires_at > ?2"
+    ).bind(await sha256Hex(tok), Date.now()).first();
+    if (a) return a;
+  }
+  const guest = await currentGuest(request, env);
+  if (!guest) return null;
   return env.DB.prepare(
-    "SELECT a.id, a.email FROM sessions s JOIN admins a ON a.id = s.admin_id WHERE s.token_hash = ?1 AND s.expires_at > ?2"
-  ).bind(await sha256Hex(tok), Date.now()).first();
+    "SELECT a.id, a.email FROM admins a JOIN guests g ON g.email = a.email AND g.verified = 1 WHERE a.email = ?1"
+  ).bind(guest.email).first();
 }
 
 function checkOrigin(request, url) {
@@ -1150,7 +1160,12 @@ async function adminRoute(request, env, ctx, url) {
   if (p === "/logout" && m === "POST") {
     const tok = getCookie(request, SESSION_COOKIE);
     if (tok) await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?1").bind(await sha256Hex(tok)).run();
-    return json({ ok: true }, 200, { "set-cookie": sessionCookie("", 0) });
+    const gtok = getCookie(request, GUEST_COOKIE);
+    if (gtok) await env.DB.prepare("DELETE FROM guest_sessions WHERE token_hash = ?1").bind(await sha256Hex(gtok)).run();
+    const res = json({ ok: true });
+    res.headers.append("set-cookie", sessionCookie("", 0));
+    res.headers.append("set-cookie", `${GUEST_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+    return res;
   }
 
   const admin = await currentAdmin(request, env);
@@ -1174,12 +1189,34 @@ async function adminRoute(request, env, ctx, url) {
     return json({ ok: true }, 200, { "set-cookie": sessionCookie("", 0) });
   }
 
+  // Approved staff list. Approved people sign in with their normal website account.
+  if (p === "/admins" && m === "GET") {
+    const rows = await env.DB.prepare(
+      `SELECT a.id, a.email, a.created_at, (SELECT verified FROM guests g WHERE g.email = a.email) AS has_account
+       FROM admins a ORDER BY a.created_at`
+    ).all();
+    return json({ staff: rows.results.map((r) => ({ ...r, has_account: !!r.has_account, you: r.id === admin.id })) });
+  }
+
   if (p === "/admins" && m === "POST") {
     const body = await readJson(request);
     const email = cleanText(body.email, 254).toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new HttpError(400, "Enter a valid email.");
-    validPassword(body.password);
-    try { await createAdmin(env, email, body.password); } catch { throw new HttpError(409, "That email already has an account."); }
+    // Random unusable password: approved staff sign in through their website account, not this form.
+    try { await createAdmin(env, email, b64url(randomBytes(32))); } catch { throw new HttpError(409, "That email is already approved."); }
+    return json({ ok: true });
+  }
+
+  let am = p.match(/^\/admins\/(\d+)$/);
+  if (am && m === "DELETE") {
+    const id = Number(am[1]);
+    if (id === admin.id) throw new HttpError(400, "You can't remove your own access.");
+    const count = (await env.DB.prepare("SELECT COUNT(*) AS c FROM admins").first()).c;
+    if (count <= 1) throw new HttpError(400, "At least one staff member must keep access.");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM sessions WHERE admin_id = ?1").bind(id),
+      env.DB.prepare("DELETE FROM admins WHERE id = ?1").bind(id),
+    ]);
     return json({ ok: true });
   }
 

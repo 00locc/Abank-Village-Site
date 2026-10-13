@@ -565,7 +565,10 @@ async function refundPayment(env, b) {
       body: "{}",
     });
     const d = await r.json();
-    if (!r.ok || !["COMPLETED", "PENDING"].includes(d.status)) return { ok: false, detail: d.message || d.name || `PayPal ${r.status}` };
+    if (!r.ok || !["COMPLETED", "PENDING"].includes(d.status)) {
+      const issue = d.details && d.details[0] ? `${d.details[0].issue}${d.details[0].description ? " – " + d.details[0].description : ""}` : "";
+      return { ok: false, detail: `${issue || d.name || "PayPal " + r.status} (capture ${capture.status})` };
+    }
     return { ok: true, ref: d.id };
   }
   return { ok: false, detail: "No online payment to refund" };

@@ -65,6 +65,11 @@
         <span class="bk-room-price">GH₵ ${fmt(a.price_ghs)} <small>/ night</small></span>`;
       lab.querySelector(".bk-room-name").textContent = a.name;
       lab.querySelector(".bk-room-left").textContent = enough || !a.available ? t.text : `Only ${a.available} left — fewer than ${need} rooms`;
+      const extras = { "block-bc": "Block C rooms: kitchen available for +GH₵ 50/day — ask at check-in.", suite: "Private kitchen available for +GH₵ 60/day — ask at check-in." };
+      if (extras[a.id]) {
+        const n = document.createElement("span"); n.className = "bk-room-note"; n.textContent = extras[a.id];
+        lab.querySelector(".bk-room-left").after(document.createElement("br"), n);
+      }
       lab.querySelector("input").addEventListener("change", () => { selected = a.id; renderList(); update(); });
       el.list.appendChild(lab);
     });

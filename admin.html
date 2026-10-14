@@ -101,7 +101,11 @@
     /* Rooms table: let it scroll sideways with clear room names */
     .rooms-table input { width:72px; }
   }
+  .flatpickr-calendar { font-family: 'Jost', sans-serif; }
+  .flatpickr-calendar .flatpickr-day.selected, .flatpickr-calendar .flatpickr-day.selected:hover, .flatpickr-calendar .flatpickr-day.startRange, .flatpickr-calendar .flatpickr-day.endRange { background: #17588C !important; border-color: #17588C !important; color: #fff !important; }
+  input.flatpickr-input[readonly] { cursor: pointer; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 </head>
 <body>
 
@@ -156,7 +160,7 @@
             <option value="cancelled">Cancelled</option>
             <option value="expired">Expired</option>
           </select></label>
-        <label><span>Staying from</span><input type="date" id="fFrom"></label>
+        <label><span>Staying from</span><input type="date" id="fFrom" placeholder="dd/mm/yyyy"></label>
         <label style="flex:1"><span>Search</span><input id="fQ" placeholder="Reference, name, email or phone"></label>
         <button class="ghost" id="refreshBtn" type="button">Refresh</button>
       </div>
@@ -231,6 +235,8 @@
   <div id="drawerBody"></div>
 </aside>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
+<script src="js/dates.js" defer></script>
 <script src="js/admin.js" defer></script>
 </body>
 </html>

@@ -113,7 +113,11 @@
     .bk-summary { flex-direction: column; align-items: flex-start; }
   }
 
+  .flatpickr-calendar { font-family: 'Jost', sans-serif; }
+  .flatpickr-calendar .flatpickr-day.selected, .flatpickr-calendar .flatpickr-day.selected:hover, .flatpickr-calendar .flatpickr-day.startRange, .flatpickr-calendar .flatpickr-day.endRange { background: #17588C !important; border-color: #17588C !important; color: #fff !important; }
+  input.flatpickr-input[readonly] { cursor: pointer; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 </head>
 <body>
 <header class="top">
@@ -181,6 +185,8 @@
 <footer>&copy; <span id="yr">2026</span> Abank Village Guest House near KNUST-Emena, Kumasi. Check-in 12:00 PM &middot; Check-out 11:00 AM</footer>
 <script>document.getElementById("yr").textContent = new Date().getFullYear();</script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
+<script src="js/dates.js" defer></script>
 <script src="js/booking.js" defer></script>
 </body>
 </html>

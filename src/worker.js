@@ -1315,6 +1315,24 @@ async function adminRoute(request, env, ctx, url) {
     return json({ ok: true });
   }
 
+  // Free-text message to the guest: emailed and added to their booking updates.
+  mm = p.match(/^\/bookings\/(\d+)\/message$/);
+  if (mm && m === "POST") {
+    const body = await readJson(request);
+    const message = cleanText(body.message, 1000);
+    if (!message) throw new HttpError(400, "Write a message first.");
+    const b = await env.DB.prepare("SELECT * FROM bookings WHERE id = ?1").bind(Number(mm[1])).first();
+    if (!b) throw new HttpError(404, "Not found");
+    if (!b.email) throw new HttpError(400, "This booking has no email address.");
+    const link = `${(env.SITE_URL || url.origin).replace(/\/$/, "")}/booking-status.html?ref=${b.ref}&t=${encodeURIComponent(await guestToken(env, b.ref))}`;
+    const sent = await sendEmail(env, b.email, `Message about your booking — ${b.ref}`,
+      `Hi ${b.guest_name},\n\n${message}\n\nView your booking: ${link}\n\nAbank Village Guest House — 0262 226 592`,
+      `<div style="font-family:Arial,sans-serif;color:#12293C;max-width:520px"><p>Hi ${escapeHtml(b.guest_name)},</p><p style="white-space:pre-line">${escapeHtml(message)}</p><p><a href="${escapeHtml(link)}">View your booking (${escapeHtml(b.ref)})</a></p><p style="font-size:13px;color:#34566F">Abank Village Guest House — 0262 226 592</p></div>`);
+    if (!sent && !isDemo(env, url)) throw new HttpError(502, "The email couldn't be sent. Please try again, or call the guest.");
+    await logEvent(env, b.id, actor, `Message from the hotel: ${message}`);
+    return json({ ok: true });
+  }
+
   mm = p.match(/^\/bookings\/(\d+)\/note$/);
   if (mm && m === "POST") {
     const body = await readJson(request);

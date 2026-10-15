@@ -128,10 +128,10 @@
     body.appendChild(dl);
 
     const err = document.createElement("div"); err.className = "err"; err.hidden = true; body.appendChild(err);
-    const note = document.createElement("input"); note.placeholder = "Optional message to the guest";
+    const note = document.createElement("input"); note.placeholder = "Optional note to include with the change below";
     const notifyLab = document.createElement("label"); notifyLab.className = "chk";
     const notify = document.createElement("input"); notify.type = "checkbox"; notify.checked = !!b.email;
-    notifyLab.append(notify, document.createTextNode(" Email the guest about this change"));
+    notifyLab.append(notify, document.createTextNode(" Email the guest when I press a button below"));
     const actions = document.createElement("div"); actions.className = "actions";
     const act = (label, payload, cls, confirmText) => {
       const btn = document.createElement("button"); btn.textContent = label; if (cls) btn.className = cls;
@@ -161,7 +161,31 @@
       };
       actions.appendChild(del);
     }
-    if (actions.children.length) { body.append(note, notifyLab, actions); }
+    if (actions.children.length) {
+      const h = document.createElement("h2"); h.textContent = "Update booking"; h.style.marginTop = "18px";
+      body.append(h, note, notifyLab, actions);
+    }
+
+    // Send the guest a message by email (also shown in their booking updates).
+    if (b.email) {
+      const mh = document.createElement("h2"); mh.textContent = "Message the guest"; mh.style.marginTop = "18px";
+      const mt = document.createElement("textarea"); mt.rows = 3; mt.maxLength = 1000;
+      mt.placeholder = `Write a message to ${b.guest_name} (sent to ${b.email})`;
+      const mOk = document.createElement("div"); mOk.className = "ok"; mOk.hidden = true;
+      const mErr = document.createElement("div"); mErr.className = "err"; mErr.hidden = true;
+      const mb = document.createElement("button"); mb.type = "button"; mb.textContent = "Send message"; mb.style.marginTop = "8px";
+      mb.onclick = async () => {
+        mOk.hidden = true; mErr.hidden = true;
+        if (!mt.value.trim()) { mErr.textContent = "Write a message first."; mErr.hidden = false; return; }
+        mb.disabled = true; mb.textContent = "Sending…";
+        try {
+          await api(`/bookings/${b.id}/message`, { method: "POST", body: { message: mt.value } });
+          mt.value = ""; mOk.textContent = `Message sent to ${b.email}.`; mOk.hidden = false;
+        } catch (e) { mErr.textContent = e.message; mErr.hidden = false; }
+        finally { mb.disabled = false; mb.textContent = "Send message"; }
+      };
+      body.append(mh, mOk, mErr, mt, mb);
+    }
     if (b.status === "payment_conflict") {
       const w = document.createElement("div"); w.className = "err";
       w.textContent = "This guest paid after their hold ran out and the rooms were taken. Call them to move dates/room (then Confirm) or refund them.";
